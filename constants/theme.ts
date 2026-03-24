@@ -1,41 +1,99 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from "react-native";
 
-const tintColorLight = "#0a7ea4";
-const tintColorDark = "#fff";
+const primaryColorLight = "#0a7ea4";
+const primaryColorDark = "#ffffff";
+
+const tintColorLight = primaryColorLight;
+const tintColorDark = primaryColorDark;
 
 export const Colors = {
   light: {
     text: "#11181C",
-    background: "#fff",
+    background: "#ffffff",
+    primary: primaryColorLight,
     tint: tintColorLight,
     icon: "#687076",
     tabIconDefault: "#687076",
     tabIconSelected: tintColorLight,
+    transparent: "transparent",
+    white: "#FFFFFF",
+    splashBackground: "#EFEFEF",
+    splashRipple: "#2E6FBE",
+    splashCircle: "#2E6FBE",
+    splashShadow: "#1A4F8A",
+    splashRingTrack: "rgba(140, 200, 255, 0.35)",
+    splashRingArc: "rgba(255,255,255,0.9)",
+    loginScreenBackground: "#D8DBE0",
+    loginCardBackground: "#EDEDEF",
+    loginHeaderGradientStart: "#246AB3",
+    loginHeaderGradientEnd: "#3898EA",
+    loginPlaceholder: "#A8A8A8",
+    loginTabBorder: "#317ED4",
+    loginTabBackground: "#EEF4FA",
+    loginTabActiveBackground: "#2D74C3",
+    loginTabText: "#2E6DB7",
+    loginTabActiveText: "#FFFFFF",
+    loginInputBorder: "#4B92DF",
+    loginInputBackground: "#F3F4F6",
+    loginInputText: "#1C2F44",
+    loginError: "#D84040",
+    loginCheckboxBorder: "#6EA7E6",
+    loginCheckboxBackground: "#FFFFFF",
+    loginCheckboxFill: "#2D74C3",
+    loginUtilityText: "#5D6A79",
+    loginHintText: "#8091A4",
+    loginOrText: "#111111",
+    socialFacebook: "#1B74E4",
+    socialInstagram: "#F56040",
+    socialGoogle: "#EA4335",
   },
   dark: {
     text: "#ECEDEE",
     background: "#151718",
+    primary: primaryColorDark,
     tint: tintColorDark,
     icon: "#9BA1A6",
     tabIconDefault: "#9BA1A6",
     tabIconSelected: tintColorDark,
+    transparent: "transparent",
+    white: "#FFFFFF",
+    splashBackground: "#151718",
+    splashRipple: "#2E6FBE",
+    splashCircle: "#2E6FBE",
+    splashShadow: "#0D2C4D",
+    splashRingTrack: "rgba(140, 200, 255, 0.35)",
+    splashRingArc: "rgba(255,255,255,0.9)",
+    loginScreenBackground: "#0F1318",
+    loginCardBackground: "#151B23",
+    loginHeaderGradientStart: "#1E4D82",
+    loginHeaderGradientEnd: "#2E6FBE",
+    loginPlaceholder: "#8A94A3",
+    loginTabBorder: "#3E6EAA",
+    loginTabBackground: "#1A2330",
+    loginTabActiveBackground: "#2D74C3",
+    loginTabText: "#A8C8F1",
+    loginTabActiveText: "#FFFFFF",
+    loginInputBorder: "#3D6390",
+    loginInputBackground: "#111923",
+    loginInputText: "#E6EEF7",
+    loginError: "#FF6B6B",
+    loginCheckboxBorder: "#5A87B8",
+    loginCheckboxBackground: "#101722",
+    loginCheckboxFill: "#4B92DF",
+    loginUtilityText: "#B6C2D0",
+    loginHintText: "#8EA0B7",
+    loginOrText: "#ECEDEE",
+    socialFacebook: "#1B74E4",
+    socialInstagram: "#F56040",
+    socialGoogle: "#EA4335",
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: "system-ui",
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: "ui-serif",
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: "ui-rounded",
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: "ui-monospace",
   },
   default: {
