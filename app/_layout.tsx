@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { AuthNavigationGate } from "@/components/auth-navigation-gate";
@@ -26,23 +27,25 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={theme === "dark" ? DarkTheme : DefaultTheme}>
-        <View style={{ flex: 1, backgroundColor: themeColors.background }}>
-          <AuthNavigationGate />
-          <Stack
-            screenOptions={{
-              contentStyle: { backgroundColor: themeColors.background },
-              headerShown: false,
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </View>
-      </ThemeProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider value={theme === "dark" ? DarkTheme : DefaultTheme}>
+          <View style={{ flex: 1, backgroundColor: themeColors.background }}>
+            <AuthNavigationGate />
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: themeColors.background },
+                headerShown: false,
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </View>
+        </ThemeProvider>
+      </GestureHandlerRootView>
     </AuthProvider>
   );
 }

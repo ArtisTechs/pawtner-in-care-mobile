@@ -1,13 +1,8 @@
+import type { UserProfile } from "@/types/user";
+
 export type OtpPurpose = "login" | "reset-password" | "signup";
 
-export interface AuthUser {
-  email: string;
-  firstName: string;
-  id: string;
-  lastName: string;
-  middleName?: string | null;
-  role: string;
-}
+export type AuthUser = UserProfile;
 
 export interface AuthSession {
   accessToken: string;

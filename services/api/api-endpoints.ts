@@ -1,4 +1,5 @@
 const AUTH_BASE_PATH = "/auth";
+const USERS_BASE_PATH = "/users";
 
 export const API_ENDPOINTS = {
   auth: {
@@ -8,5 +9,9 @@ export const API_ENDPOINTS = {
     resetPassword: `${AUTH_BASE_PATH}/reset-password`,
     sendOtp: `${AUTH_BASE_PATH}/send-otp`,
     signUp: `${AUTH_BASE_PATH}/signup`,
+  },
+  users: {
+    base: USERS_BASE_PATH,
+    byId: (id: string) => `${USERS_BASE_PATH}/${encodeURIComponent(id)}`,
   },
 } as const;

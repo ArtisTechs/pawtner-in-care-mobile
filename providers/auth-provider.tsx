@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useState } from "react";
 
 import { authService } from "@/services/auth/auth.service";
 import { authStorage } from "@/services/auth/auth.storage";
+import { sessionPreloadService } from "@/services/preload/session-preload.service";
 import type {
   AuthContextValue,
   AuthSession,
@@ -28,9 +29,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const hydrateSession = async () => {
       try {
         const storedSession = await authStorage.getSession();
+        const hydratedSession = storedSession
+          ? await sessionPreloadService.preloadSessionData(storedSession)
+          : null;
 
         if (isMounted) {
-          setSession(storedSession);
+          setSession(hydratedSession);
         }
       } finally {
         if (isMounted) {
@@ -47,9 +51,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signIn = async (payload: LoginPayload) => {
-    const nextSession = await authService.login(payload);
+    const loginSession = await authService.login(payload);
+    const nextSession =
+      await sessionPreloadService.preloadSessionData(loginSession);
     setSession(nextSession);
-    await authStorage.setSession(nextSession);
     return nextSession;
   };
 
@@ -58,8 +63,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signOut = async () => {
+    const userId = session?.user.id;
     setSession(null);
-    await authStorage.clearSession();
+    await sessionPreloadService.clearSessionCache(userId);
   };
 
   const sendOtp = async (payload: SendOtpPayload) => {
