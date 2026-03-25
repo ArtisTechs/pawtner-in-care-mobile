@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { RoundedFontFamily } from "@/constants/theme";
 import type { ToastState } from "@/hooks/use-toast";
 
 type AppToastProps = {
@@ -55,6 +56,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#C53929",
   },
   message: {
+    fontFamily: RoundedFontFamily,
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",

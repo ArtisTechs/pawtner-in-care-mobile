@@ -96,10 +96,16 @@ export const Fonts = Platform.select({
     rounded: "ui-rounded",
     mono: "ui-monospace",
   },
-  default: {
-    sans: "normal",
+  android: {
+    sans: "sans-serif",
     serif: "serif",
-    rounded: "normal",
+    rounded: "sans-serif-medium",
+    mono: "monospace",
+  },
+  default: {
+    sans: "sans-serif",
+    serif: "serif",
+    rounded: "sans-serif",
     mono: "monospace",
   },
   web: {
@@ -110,3 +116,5 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+export const RoundedFontFamily = Fonts?.rounded ?? "sans-serif";

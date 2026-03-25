@@ -1,5 +1,6 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
+import { RoundedFontFamily } from "@/constants/theme";
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 export type ThemedTextProps = TextProps & {
@@ -35,24 +36,29 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
+    fontFamily: RoundedFontFamily,
     fontSize: 16,
     lineHeight: 24,
   },
   defaultSemiBold: {
+    fontFamily: RoundedFontFamily,
     fontSize: 16,
     lineHeight: 24,
     fontWeight: '600',
   },
   title: {
+    fontFamily: RoundedFontFamily,
     fontSize: 32,
     fontWeight: 'bold',
     lineHeight: 32,
   },
   subtitle: {
+    fontFamily: RoundedFontFamily,
     fontSize: 20,
     fontWeight: 'bold',
   },
   link: {
+    fontFamily: RoundedFontFamily,
     lineHeight: 30,
     fontSize: 16,
     color: '#0a7ea4',

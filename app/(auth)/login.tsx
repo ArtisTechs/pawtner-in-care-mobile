@@ -1,7 +1,7 @@
 import { AppToast } from "@/components/ui/app-toast";
 import { OtpCodeInput } from "@/components/ui/otp-code-input";
 import { ERROR_MESSAGES } from "@/constants/error-messages";
-import { Colors } from "@/constants/theme";
+import { Colors, RoundedFontFamily } from "@/constants/theme";
 import {
   type AuthFieldKey,
   type AuthFormValues,
@@ -21,6 +21,8 @@ import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -56,6 +58,8 @@ const INITIAL_FORM: AuthFormValues = {
 
 const OTP_LENGTH = 6;
 const DEFAULT_RESEND_COOLDOWN_SECONDS = 60;
+const TITLE_REVEAL_DURATION_MS = 220;
+const TITLE_HOLD_DURATION_MS = 520;
 
 const extractResendCooldownSeconds = (
   response: SendOtpResponse | null,
@@ -100,7 +104,7 @@ export default function Login() {
   const colors = Colors[colorScheme];
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const { confirmOtp, resetPassword, sendOtp, signIn, signUp } = useAuth();
   const { hideToast, showToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<AuthMode>("login");
@@ -115,7 +119,11 @@ export default function Login() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTitleAnimationDone, setIsTitleAnimationDone] = useState(false);
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
+  const formTranslateY = useState(() => new Animated.Value(0))[0];
+  const titleOpacity = useState(() => new Animated.Value(0))[0];
+  const titleTranslateY = useState(() => new Animated.Value(0))[0];
   const [passwordVisibility, setPasswordVisibility] =
     useState<PasswordFieldVisibility>({
       loginPassword: false,
@@ -127,8 +135,7 @@ export default function Login() {
 
   const isSignUp = activeTab === "signup";
   const isSignUpOtpStep = isSignUp && signUpStep === "otp";
-  const isForgotPasswordOtpStep =
-    !isSignUp && forgotPasswordStep === "otp";
+  const isForgotPasswordOtpStep = !isSignUp && forgotPasswordStep === "otp";
   const isForgotPasswordPasswordStep =
     !isSignUp && forgotPasswordStep === "password";
   const isPlainLoginStep = !isSignUp && forgotPasswordStep === "idle";
@@ -136,6 +143,60 @@ export default function Login() {
   const isForgotPasswordFlow = !isSignUp && forgotPasswordStep !== "idle";
   const titleWidth = Math.min(width, 420) * 0.7;
   const titleHeight = titleWidth * 0.9;
+
+  useEffect(() => {
+    const logoTop = insets.top + 20;
+    const logoCenterWhenAtTop = logoTop + titleHeight / 2;
+    const logoStartOffset = Math.max(0, height / 2 - logoCenterWhenAtTop);
+    const formStartOffset = height + insets.bottom;
+
+    titleTranslateY.setValue(logoStartOffset);
+    titleOpacity.setValue(0);
+    formTranslateY.setValue(formStartOffset);
+    setIsTitleAnimationDone(false);
+
+    const introAnimation = Animated.sequence([
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: TITLE_REVEAL_DURATION_MS,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.delay(TITLE_HOLD_DURATION_MS),
+      Animated.parallel([
+        Animated.timing(titleTranslateY, {
+          toValue: 0,
+          duration: 920,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(formTranslateY, {
+          toValue: 0,
+          duration: 920,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]);
+
+    introAnimation.start(({ finished }) => {
+      if (finished) {
+        setIsTitleAnimationDone(true);
+      }
+    });
+
+    return () => {
+      introAnimation.stop();
+    };
+  }, [
+    formTranslateY,
+    height,
+    insets.bottom,
+    insets.top,
+    titleHeight,
+    titleOpacity,
+    titleTranslateY,
+  ]);
 
   useEffect(() => {
     if (resendSecondsLeft <= 0) {
@@ -406,7 +467,7 @@ export default function Login() {
         email: form.email.trim(),
         password: form.password,
       });
-      router.replace("/(tabs)");
+      router.replace("/(auth)/get-started");
     } catch (error) {
       setApiError(getErrorMessage(error, ERROR_MESSAGES.authFallback));
     } finally {
@@ -485,9 +546,9 @@ export default function Login() {
       ? "Send OTP"
       : "Confirm OTP & Create Account"
     : forgotPasswordStep === "otp"
-        ? "Confirm OTP"
-        : forgotPasswordStep === "password"
-          ? "Save New Password"
+      ? "Confirm OTP"
+      : forgotPasswordStep === "password"
+        ? "Save New Password"
         : "Log In";
 
   const secondaryLabel = isSignUp
@@ -505,7 +566,12 @@ export default function Login() {
       <AppToast onDismiss={hideToast} toast={toast} />
 
       <KeyboardAvoidingView
-        style={styles.authCard}
+        style={[
+          styles.authCard,
+          !isTitleAnimationDone && {
+            backgroundColor: colors.loginHeaderGradientEnd,
+          },
+        ]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
@@ -518,461 +584,511 @@ export default function Login() {
             styles.topHeader,
             { height: Math.max(245, titleHeight + 44) },
           ]}
-        >
-          <View style={styles.logoFrame}>
-            <Image
-              source={require("../../assets/images/title-logo.png")}
-              style={[styles.logo, { width: titleWidth, height: titleHeight }]}
-              resizeMode="contain"
-            />
-          </View>
-        </LinearGradient>
+        />
 
-        <ScrollView
-          style={styles.formScroll}
-          contentContainerStyle={[
-            styles.formContent,
-            { paddingBottom: 42 + insets.bottom },
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.animatedTitleWrap,
+            {
+              opacity: titleOpacity,
+              top: insets.top + 20,
+              transform: [{ translateY: titleTranslateY }],
+            },
           ]}
-          automaticallyAdjustKeyboardInsets
-          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.tabSwitch}>
-            <Pressable
-              style={[styles.tabButton, !isSignUp && styles.activeTabButton]}
-              onPress={() => switchTab("login")}
-            >
-              <Text style={[styles.tabText, !isSignUp && styles.activeTabText]}>
-                Login
-              </Text>
-            </Pressable>
+          <Image
+            source={require("../../assets/images/title-logo.png")}
+            style={[styles.logo, { width: titleWidth, height: titleHeight }]}
+            resizeMode="contain"
+          />
+        </Animated.View>
 
-            <Pressable
-              style={[styles.tabButton, isSignUp && styles.activeTabButton]}
-              onPress={() => switchTab("signup")}
-            >
-              <Text style={[styles.tabText, isSignUp && styles.activeTabText]}>
-                Sign Up
-              </Text>
-            </Pressable>
-          </View>
+        <Animated.View
+          pointerEvents={isTitleAnimationDone ? "auto" : "none"}
+          style={[
+            styles.formArea,
+            { transform: [{ translateY: formTranslateY }] },
+          ]}
+        >
+          <ScrollView
+            style={styles.formScroll}
+            contentContainerStyle={[
+              styles.formContent,
+              { paddingBottom: 42 + insets.bottom },
+            ]}
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode={
+              Platform.OS === "ios" ? "interactive" : "on-drag"
+            }
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.tabSwitch}>
+              <Pressable
+                style={[styles.tabButton, !isSignUp && styles.activeTabButton]}
+                onPress={() => switchTab("login")}
+              >
+                <Text
+                  style={[styles.tabText, !isSignUp && styles.activeTabText]}
+                >
+                  Login
+                </Text>
+              </Pressable>
 
-          {isSignUp ? (
-            <>
-              {signUpStep === "details" ? (
-                <>
-                  <TextInput
-                    placeholder="First Name"
-                    placeholderTextColor={colors.loginPlaceholder}
-                    value={form.firstName}
-                    onChangeText={(value) => updateField("firstName", value)}
-                    style={[styles.input, errors.firstName && styles.inputError]}
-                  />
-                  {errors.firstName ? (
-                    <Text style={styles.errorText}>{errors.firstName}</Text>
-                  ) : null}
-
-                  <TextInput
-                    placeholder="Middle Name"
-                    placeholderTextColor={colors.loginPlaceholder}
-                    value={form.middleName}
-                    onChangeText={(value) => updateField("middleName", value)}
-                    style={styles.input}
-                  />
-
-                  <TextInput
-                    placeholder="Last Name"
-                    placeholderTextColor={colors.loginPlaceholder}
-                    value={form.lastName}
-                    onChangeText={(value) => updateField("lastName", value)}
-                    style={[styles.input, errors.lastName && styles.inputError]}
-                  />
-                  {errors.lastName ? (
-                    <Text style={styles.errorText}>{errors.lastName}</Text>
-                  ) : null}
-
-                  <TextInput
-                    placeholder="Email"
-                    placeholderTextColor={colors.loginPlaceholder}
-                    value={form.email}
-                    onChangeText={(value) => updateField("email", value)}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    style={[styles.input, errors.email && styles.inputError]}
-                  />
-                  {errors.email ? (
-                    <Text style={styles.errorText}>{errors.email}</Text>
-                  ) : null}
-
-                  <View
-                    style={[
-                      styles.passwordInputWrapper,
-                      errors.password && styles.inputError,
-                    ]}
-                  >
-                    <TextInput
-                      placeholder="Password"
-                      placeholderTextColor={colors.loginPlaceholder}
-                      value={form.password}
-                      onChangeText={(value) => {
-                        updateField("password", value);
-                        clearFieldError("confirmPassword");
-                      }}
-                      secureTextEntry={!passwordVisibility.signUpPassword}
-                      style={styles.passwordInput}
-                    />
-                    <Pressable
-                      accessibilityLabel={
-                        passwordVisibility.signUpPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      hitSlop={10}
-                      onPress={() => togglePasswordVisibility("signUpPassword")}
-                      style={styles.passwordIconButton}
-                    >
-                      <MaterialIcons
-                        color={colors.loginPlaceholder}
-                        name={
-                          passwordVisibility.signUpPassword
-                            ? "visibility-off"
-                            : "visibility"
-                        }
-                        size={22}
-                      />
-                    </Pressable>
-                  </View>
-                  {errors.password ? (
-                    <Text style={styles.errorText}>{errors.password}</Text>
-                  ) : null}
-
-                  <View
-                    style={[
-                      styles.passwordInputWrapper,
-                      errors.confirmPassword && styles.inputError,
-                    ]}
-                  >
-                    <TextInput
-                      placeholder="Confirm Password"
-                      placeholderTextColor={colors.loginPlaceholder}
-                      value={form.confirmPassword}
-                      onChangeText={(value) =>
-                        updateField("confirmPassword", value)
-                      }
-                      secureTextEntry={!passwordVisibility.signUpConfirmPassword}
-                      style={styles.passwordInput}
-                    />
-                    <Pressable
-                      accessibilityLabel={
-                        passwordVisibility.signUpConfirmPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      hitSlop={10}
-                      onPress={() =>
-                        togglePasswordVisibility("signUpConfirmPassword")
-                      }
-                      style={styles.passwordIconButton}
-                    >
-                      <MaterialIcons
-                        color={colors.loginPlaceholder}
-                        name={
-                          passwordVisibility.signUpConfirmPassword
-                            ? "visibility-off"
-                            : "visibility"
-                        }
-                        size={22}
-                      />
-                    </Pressable>
-                  </View>
-                  {errors.confirmPassword ? (
-                    <Text style={styles.errorText}>
-                      {errors.confirmPassword}
-                    </Text>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <Text style={styles.flowTitle}>Verify your email</Text>
-                  <Text style={styles.flowText}>
-                    Enter the OTP sent to {form.email.trim()} before creating
-                    your account.
-                  </Text>
-                  <OtpCodeInput
-                    activeBorderColor={colors.loginTabActiveBackground}
-                    backgroundColor={colors.loginInputBackground}
-                    borderColor={colors.loginInputBorder}
-                    errorBorderColor={colors.loginError}
-                    hasError={Boolean(otpError)}
-                    length={OTP_LENGTH}
-                    onChange={(value) => {
-                      setOtpCode(value);
-                      setOtpError(null);
-                      setApiError(null);
-                    }}
-                    textColor={colors.loginInputText}
-                    value={otpCode}
-                  />
-                  {otpError ? (
-                    <Text style={styles.otpErrorText}>{otpError}</Text>
-                  ) : null}
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              <TextInput
-                placeholder="Email"
-                placeholderTextColor={colors.loginPlaceholder}
-                value={form.email}
-                onChangeText={(value) => updateField("email", value)}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={[styles.input, errors.email && styles.inputError]}
-              />
-              {errors.email ? (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              ) : null}
-
-              {isPlainLoginStep ? (
-                <>
-                  <View
-                    style={[
-                      styles.passwordInputWrapper,
-                      errors.password && styles.inputError,
-                    ]}
-                  >
-                    <TextInput
-                      placeholder="Password"
-                      placeholderTextColor={colors.loginPlaceholder}
-                      value={form.password}
-                      onChangeText={(value) => updateField("password", value)}
-                      secureTextEntry={!passwordVisibility.loginPassword}
-                      style={styles.passwordInput}
-                    />
-                    <Pressable
-                      accessibilityLabel={
-                        passwordVisibility.loginPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      hitSlop={10}
-                      onPress={() => togglePasswordVisibility("loginPassword")}
-                      style={styles.passwordIconButton}
-                    >
-                      <MaterialIcons
-                        color={colors.loginPlaceholder}
-                        name={
-                          passwordVisibility.loginPassword
-                            ? "visibility-off"
-                            : "visibility"
-                        }
-                        size={22}
-                      />
-                    </Pressable>
-                  </View>
-                  {errors.password ? (
-                    <Text style={styles.errorText}>{errors.password}</Text>
-                  ) : null}
-                </>
-              ) : null}
-
-              {isForgotPasswordOtpStep ? (
-                <>
-                  <Text style={styles.flowTitle}>Verify OTP</Text>
-                  <Text style={styles.flowText}>
-                    Enter the OTP sent to {form.email.trim()} to continue with
-                    password reset.
-                  </Text>
-                  <OtpCodeInput
-                    activeBorderColor={colors.loginTabActiveBackground}
-                    backgroundColor={colors.loginInputBackground}
-                    borderColor={colors.loginInputBorder}
-                    errorBorderColor={colors.loginError}
-                    hasError={Boolean(otpError)}
-                    length={OTP_LENGTH}
-                    onChange={(value) => {
-                      setOtpCode(value);
-                      setOtpError(null);
-                      setApiError(null);
-                    }}
-                    textColor={colors.loginInputText}
-                    value={otpCode}
-                  />
-                  {otpError ? (
-                    <Text style={styles.otpErrorText}>{otpError}</Text>
-                  ) : null}
-                </>
-              ) : null}
-
-              {isForgotPasswordPasswordStep ? (
-                <>
-                  <Text style={styles.flowTitle}>Reset your password</Text>
-                  <Text style={styles.flowText}>
-                    Choose and confirm your new password.
-                  </Text>
-
-                  <View
-                    style={[
-                      styles.passwordInputWrapper,
-                      errors.password && styles.inputError,
-                    ]}
-                  >
-                    <TextInput
-                      placeholder="New Password"
-                      placeholderTextColor={colors.loginPlaceholder}
-                      value={form.password}
-                      onChangeText={(value) => {
-                        updateField("password", value);
-                        clearFieldError("confirmPassword");
-                      }}
-                      secureTextEntry={!passwordVisibility.resetPassword}
-                      style={styles.passwordInput}
-                    />
-                    <Pressable
-                      accessibilityLabel={
-                        passwordVisibility.resetPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      hitSlop={10}
-                      onPress={() => togglePasswordVisibility("resetPassword")}
-                      style={styles.passwordIconButton}
-                    >
-                      <MaterialIcons
-                        color={colors.loginPlaceholder}
-                        name={
-                          passwordVisibility.resetPassword
-                            ? "visibility-off"
-                            : "visibility"
-                        }
-                        size={22}
-                      />
-                    </Pressable>
-                  </View>
-                  {errors.password ? (
-                    <Text style={styles.errorText}>{errors.password}</Text>
-                  ) : null}
-
-                  <View
-                    style={[
-                      styles.passwordInputWrapper,
-                      errors.confirmPassword && styles.inputError,
-                    ]}
-                  >
-                    <TextInput
-                      placeholder="Confirm Password"
-                      placeholderTextColor={colors.loginPlaceholder}
-                      value={form.confirmPassword}
-                      onChangeText={(value) =>
-                        updateField("confirmPassword", value)
-                      }
-                      secureTextEntry={!passwordVisibility.resetConfirmPassword}
-                      style={styles.passwordInput}
-                    />
-                    <Pressable
-                      accessibilityLabel={
-                        passwordVisibility.resetConfirmPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      hitSlop={10}
-                      onPress={() =>
-                        togglePasswordVisibility("resetConfirmPassword")
-                      }
-                      style={styles.passwordIconButton}
-                    >
-                      <MaterialIcons
-                        color={colors.loginPlaceholder}
-                        name={
-                          passwordVisibility.resetConfirmPassword
-                            ? "visibility-off"
-                            : "visibility"
-                        }
-                        size={22}
-                      />
-                    </Pressable>
-                  </View>
-                  {errors.confirmPassword ? (
-                    <Text style={styles.errorText}>
-                      {errors.confirmPassword}
-                    </Text>
-                  ) : null}
-                </>
-              ) : null}
-            </>
-          )}
-
-          {apiError ? (
-            <Text style={isOtpFlow ? styles.otpErrorText : styles.errorText}>
-              {apiError}
-            </Text>
-          ) : null}
-
-          {!isSignUp && isPlainLoginStep && form.email.trim() ? (
-            <View style={styles.utilityRow}>
-              <Pressable onPress={handleForgotPasswordStart}>
-                <Text style={styles.forgotText}>Forgot password?</Text>
+              <Pressable
+                style={[styles.tabButton, isSignUp && styles.activeTabButton]}
+                onPress={() => switchTab("signup")}
+              >
+                <Text
+                  style={[styles.tabText, isSignUp && styles.activeTabText]}
+                >
+                  Sign Up
+                </Text>
               </Pressable>
             </View>
-          ) : null}
 
-          <Pressable
-            disabled={isSubmitting}
-            style={[
-              styles.submitButton,
-              isSubmitting && styles.submitButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.loginTabActiveText} />
+            {isSignUp ? (
+              <>
+                {signUpStep === "details" ? (
+                  <>
+                    <TextInput
+                      placeholder="First Name"
+                      placeholderTextColor={colors.loginPlaceholder}
+                      value={form.firstName}
+                      onChangeText={(value) => updateField("firstName", value)}
+                      style={[
+                        styles.input,
+                        errors.firstName && styles.inputError,
+                      ]}
+                    />
+                    {errors.firstName ? (
+                      <Text style={styles.errorText}>{errors.firstName}</Text>
+                    ) : null}
+
+                    <TextInput
+                      placeholder="Middle Name"
+                      placeholderTextColor={colors.loginPlaceholder}
+                      value={form.middleName}
+                      onChangeText={(value) => updateField("middleName", value)}
+                      style={styles.input}
+                    />
+
+                    <TextInput
+                      placeholder="Last Name"
+                      placeholderTextColor={colors.loginPlaceholder}
+                      value={form.lastName}
+                      onChangeText={(value) => updateField("lastName", value)}
+                      style={[
+                        styles.input,
+                        errors.lastName && styles.inputError,
+                      ]}
+                    />
+                    {errors.lastName ? (
+                      <Text style={styles.errorText}>{errors.lastName}</Text>
+                    ) : null}
+
+                    <TextInput
+                      placeholder="Email"
+                      placeholderTextColor={colors.loginPlaceholder}
+                      value={form.email}
+                      onChangeText={(value) => updateField("email", value)}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      style={[styles.input, errors.email && styles.inputError]}
+                    />
+                    {errors.email ? (
+                      <Text style={styles.errorText}>{errors.email}</Text>
+                    ) : null}
+
+                    <View
+                      style={[
+                        styles.passwordInputWrapper,
+                        errors.password && styles.inputError,
+                      ]}
+                    >
+                      <TextInput
+                        placeholder="Password"
+                        placeholderTextColor={colors.loginPlaceholder}
+                        value={form.password}
+                        onChangeText={(value) => {
+                          updateField("password", value);
+                          clearFieldError("confirmPassword");
+                        }}
+                        secureTextEntry={!passwordVisibility.signUpPassword}
+                        style={styles.passwordInput}
+                      />
+                      <Pressable
+                        accessibilityLabel={
+                          passwordVisibility.signUpPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                        hitSlop={10}
+                        onPress={() =>
+                          togglePasswordVisibility("signUpPassword")
+                        }
+                        style={styles.passwordIconButton}
+                      >
+                        <MaterialIcons
+                          color={colors.loginPlaceholder}
+                          name={
+                            passwordVisibility.signUpPassword
+                              ? "visibility-off"
+                              : "visibility"
+                          }
+                          size={22}
+                        />
+                      </Pressable>
+                    </View>
+                    {errors.password ? (
+                      <Text style={styles.errorText}>{errors.password}</Text>
+                    ) : null}
+
+                    <View
+                      style={[
+                        styles.passwordInputWrapper,
+                        errors.confirmPassword && styles.inputError,
+                      ]}
+                    >
+                      <TextInput
+                        placeholder="Confirm Password"
+                        placeholderTextColor={colors.loginPlaceholder}
+                        value={form.confirmPassword}
+                        onChangeText={(value) =>
+                          updateField("confirmPassword", value)
+                        }
+                        secureTextEntry={
+                          !passwordVisibility.signUpConfirmPassword
+                        }
+                        style={styles.passwordInput}
+                      />
+                      <Pressable
+                        accessibilityLabel={
+                          passwordVisibility.signUpConfirmPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                        hitSlop={10}
+                        onPress={() =>
+                          togglePasswordVisibility("signUpConfirmPassword")
+                        }
+                        style={styles.passwordIconButton}
+                      >
+                        <MaterialIcons
+                          color={colors.loginPlaceholder}
+                          name={
+                            passwordVisibility.signUpConfirmPassword
+                              ? "visibility-off"
+                              : "visibility"
+                          }
+                          size={22}
+                        />
+                      </Pressable>
+                    </View>
+                    {errors.confirmPassword ? (
+                      <Text style={styles.errorText}>
+                        {errors.confirmPassword}
+                      </Text>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.flowTitle}>Verify your email</Text>
+                    <Text style={styles.flowText}>
+                      Enter the OTP sent to {form.email.trim()} before creating
+                      your account.
+                    </Text>
+                    <OtpCodeInput
+                      activeBorderColor={colors.loginTabActiveBackground}
+                      backgroundColor={colors.loginInputBackground}
+                      borderColor={colors.loginInputBorder}
+                      errorBorderColor={colors.loginError}
+                      hasError={Boolean(otpError)}
+                      length={OTP_LENGTH}
+                      onChange={(value) => {
+                        setOtpCode(value);
+                        setOtpError(null);
+                        setApiError(null);
+                      }}
+                      textColor={colors.loginInputText}
+                      value={otpCode}
+                    />
+                    {otpError ? (
+                      <Text style={styles.otpErrorText}>{otpError}</Text>
+                    ) : null}
+                  </>
+                )}
+              </>
             ) : (
-              <Text style={styles.submitButtonText}>{submitLabel}</Text>
+              <>
+                <TextInput
+                  placeholder="Email"
+                  placeholderTextColor={colors.loginPlaceholder}
+                  value={form.email}
+                  onChangeText={(value) => updateField("email", value)}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={[styles.input, errors.email && styles.inputError]}
+                />
+                {errors.email ? (
+                  <Text style={styles.errorText}>{errors.email}</Text>
+                ) : null}
+
+                {isPlainLoginStep ? (
+                  <>
+                    <View
+                      style={[
+                        styles.passwordInputWrapper,
+                        errors.password && styles.inputError,
+                      ]}
+                    >
+                      <TextInput
+                        placeholder="Password"
+                        placeholderTextColor={colors.loginPlaceholder}
+                        value={form.password}
+                        onChangeText={(value) => updateField("password", value)}
+                        secureTextEntry={!passwordVisibility.loginPassword}
+                        style={styles.passwordInput}
+                      />
+                      <Pressable
+                        accessibilityLabel={
+                          passwordVisibility.loginPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                        hitSlop={10}
+                        onPress={() =>
+                          togglePasswordVisibility("loginPassword")
+                        }
+                        style={styles.passwordIconButton}
+                      >
+                        <MaterialIcons
+                          color={colors.loginPlaceholder}
+                          name={
+                            passwordVisibility.loginPassword
+                              ? "visibility-off"
+                              : "visibility"
+                          }
+                          size={22}
+                        />
+                      </Pressable>
+                    </View>
+                    {errors.password ? (
+                      <Text style={styles.errorText}>{errors.password}</Text>
+                    ) : null}
+                  </>
+                ) : null}
+
+                {isForgotPasswordOtpStep ? (
+                  <>
+                    <Text style={styles.flowTitle}>Verify OTP</Text>
+                    <Text style={styles.flowText}>
+                      Enter the OTP sent to {form.email.trim()} to continue with
+                      password reset.
+                    </Text>
+                    <OtpCodeInput
+                      activeBorderColor={colors.loginTabActiveBackground}
+                      backgroundColor={colors.loginInputBackground}
+                      borderColor={colors.loginInputBorder}
+                      errorBorderColor={colors.loginError}
+                      hasError={Boolean(otpError)}
+                      length={OTP_LENGTH}
+                      onChange={(value) => {
+                        setOtpCode(value);
+                        setOtpError(null);
+                        setApiError(null);
+                      }}
+                      textColor={colors.loginInputText}
+                      value={otpCode}
+                    />
+                    {otpError ? (
+                      <Text style={styles.otpErrorText}>{otpError}</Text>
+                    ) : null}
+                  </>
+                ) : null}
+
+                {isForgotPasswordPasswordStep ? (
+                  <>
+                    <Text style={styles.flowTitle}>Reset your password</Text>
+                    <Text style={styles.flowText}>
+                      Choose and confirm your new password.
+                    </Text>
+
+                    <View
+                      style={[
+                        styles.passwordInputWrapper,
+                        errors.password && styles.inputError,
+                      ]}
+                    >
+                      <TextInput
+                        placeholder="New Password"
+                        placeholderTextColor={colors.loginPlaceholder}
+                        value={form.password}
+                        onChangeText={(value) => {
+                          updateField("password", value);
+                          clearFieldError("confirmPassword");
+                        }}
+                        secureTextEntry={!passwordVisibility.resetPassword}
+                        style={styles.passwordInput}
+                      />
+                      <Pressable
+                        accessibilityLabel={
+                          passwordVisibility.resetPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                        hitSlop={10}
+                        onPress={() =>
+                          togglePasswordVisibility("resetPassword")
+                        }
+                        style={styles.passwordIconButton}
+                      >
+                        <MaterialIcons
+                          color={colors.loginPlaceholder}
+                          name={
+                            passwordVisibility.resetPassword
+                              ? "visibility-off"
+                              : "visibility"
+                          }
+                          size={22}
+                        />
+                      </Pressable>
+                    </View>
+                    {errors.password ? (
+                      <Text style={styles.errorText}>{errors.password}</Text>
+                    ) : null}
+
+                    <View
+                      style={[
+                        styles.passwordInputWrapper,
+                        errors.confirmPassword && styles.inputError,
+                      ]}
+                    >
+                      <TextInput
+                        placeholder="Confirm Password"
+                        placeholderTextColor={colors.loginPlaceholder}
+                        value={form.confirmPassword}
+                        onChangeText={(value) =>
+                          updateField("confirmPassword", value)
+                        }
+                        secureTextEntry={
+                          !passwordVisibility.resetConfirmPassword
+                        }
+                        style={styles.passwordInput}
+                      />
+                      <Pressable
+                        accessibilityLabel={
+                          passwordVisibility.resetConfirmPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                        hitSlop={10}
+                        onPress={() =>
+                          togglePasswordVisibility("resetConfirmPassword")
+                        }
+                        style={styles.passwordIconButton}
+                      >
+                        <MaterialIcons
+                          color={colors.loginPlaceholder}
+                          name={
+                            passwordVisibility.resetConfirmPassword
+                              ? "visibility-off"
+                              : "visibility"
+                          }
+                          size={22}
+                        />
+                      </Pressable>
+                    </View>
+                    {errors.confirmPassword ? (
+                      <Text style={styles.errorText}>
+                        {errors.confirmPassword}
+                      </Text>
+                    ) : null}
+                  </>
+                ) : null}
+              </>
             )}
-          </Pressable>
 
-          {isOtpFlow && form.email.trim() ? (
-            <Pressable
-              disabled={!canResendOtp}
-              onPress={handleResendOtp}
-              style={styles.linkRow}
-            >
-              <Text style={[styles.linkText, !canResendOtp && styles.linkTextDisabled]}>
-                {canResendOtp
-                  ? "Resend OTP"
-                  : `Resend OTP in ${formatResendTimer(resendSecondsLeft)}`}
+            {apiError ? (
+              <Text style={isOtpFlow ? styles.otpErrorText : styles.errorText}>
+                {apiError}
               </Text>
-            </Pressable>
-          ) : null}
+            ) : null}
 
-          {showSecondaryAction ? (
-            <Pressable onPress={handleSecondaryAction} style={styles.linkRow}>
-              <Text style={styles.linkText}>{secondaryLabel}</Text>
-            </Pressable>
-          ) : (
+            {!isSignUp && isPlainLoginStep && form.email.trim() ? (
+              <View style={styles.utilityRow}>
+                <Pressable onPress={handleForgotPasswordStart}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
             <Pressable
-              onPress={() => switchTab(isSignUp ? "login" : "signup")}
-              style={styles.accountHintRow}
+              disabled={isSubmitting}
+              style={[
+                styles.submitButton,
+                isSubmitting && styles.submitButtonDisabled,
+              ]}
+              onPress={handleSubmit}
             >
-              <Text style={styles.accountHintText}>
-                {isSignUp ? "Already have an account? " : "No account yet? "}
-                <Text style={styles.accountHintLink}>
-                  {isSignUp ? "Log in" : "Sign up"}
+              {isSubmitting ? (
+                <ActivityIndicator color={colors.loginTabActiveText} />
+              ) : (
+                <Text style={styles.submitButtonText}>{submitLabel}</Text>
+              )}
+            </Pressable>
+
+            {isOtpFlow && form.email.trim() ? (
+              <Pressable
+                disabled={!canResendOtp}
+                onPress={handleResendOtp}
+                style={styles.linkRow}
+              >
+                <Text
+                  style={[
+                    styles.linkText,
+                    !canResendOtp && styles.linkTextDisabled,
+                  ]}
+                >
+                  {canResendOtp
+                    ? "Resend OTP"
+                    : `Resend OTP in ${formatResendTimer(resendSecondsLeft)}`}
                 </Text>
-              </Text>
-            </Pressable>
-          )}
-        </ScrollView>
+              </Pressable>
+            ) : null}
+
+            {showSecondaryAction ? (
+              <Pressable onPress={handleSecondaryAction} style={styles.linkRow}>
+                <Text style={styles.linkText}>{secondaryLabel}</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => switchTab(isSignUp ? "login" : "signup")}
+                style={styles.accountHintRow}
+              >
+                <Text style={styles.accountHintText}>
+                  {isSignUp
+                    ? "Already have an account? "
+                    : "Don’t have an account? "}
+                  <Text style={styles.accountHintLink}>
+                    {isSignUp ? "Log in" : "Sign up"}
+                  </Text>
+                </Text>
+              </Pressable>
+            )}
+          </ScrollView>
+        </Animated.View>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-const createStyles = (colors: typeof Colors.light) =>
-  StyleSheet.create({
+const createStyles = (colors: typeof Colors.light) => {
+  const roundedText = { fontFamily: RoundedFontFamily } as const;
+  const roundedInput = { fontFamily: RoundedFontFamily } as const;
+
+  return StyleSheet.create({
     screen: {
       flex: 1,
       backgroundColor: colors.loginScreenBackground,
@@ -988,6 +1104,10 @@ const createStyles = (colors: typeof Colors.light) =>
     formScroll: {
       flex: 1,
     },
+    formArea: {
+      flex: 1,
+      backgroundColor: colors.loginCardBackground,
+    },
     topHeader: {
       height: 245,
       borderBottomRightRadius: 48,
@@ -996,11 +1116,11 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingHorizontal: 24,
       paddingTop: 20,
     },
-    logoFrame: {
-      width: "80%",
-      paddingVertical: 10,
+    animatedTitleWrap: {
+      position: "absolute",
+      width: "100%",
+      zIndex: 2,
       alignItems: "center",
-      justifyContent: "center",
     },
     logo: {
       maxWidth: "100%",
@@ -1031,6 +1151,7 @@ const createStyles = (colors: typeof Colors.light) =>
       backgroundColor: colors.loginTabActiveBackground,
     },
     tabText: {
+      ...roundedText,
       color: colors.loginTabText,
       fontSize: 20,
       fontWeight: "700",
@@ -1039,6 +1160,7 @@ const createStyles = (colors: typeof Colors.light) =>
       color: colors.loginTabActiveText,
     },
     flowTitle: {
+      ...roundedText,
       width: "76%",
       color: colors.loginInputText,
       fontSize: 18,
@@ -1046,6 +1168,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginBottom: 8,
     },
     flowText: {
+      ...roundedText,
       width: "76%",
       color: colors.loginHintText,
       fontSize: 13,
@@ -1053,6 +1176,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginBottom: 14,
     },
     input: {
+      ...roundedInput,
       width: "76%",
       height: 48,
       borderWidth: 1,
@@ -1078,6 +1202,7 @@ const createStyles = (colors: typeof Colors.light) =>
       alignItems: "center",
     },
     passwordInput: {
+      ...roundedInput,
       flex: 1,
       height: "100%",
       color: colors.loginInputText,
@@ -1093,6 +1218,7 @@ const createStyles = (colors: typeof Colors.light) =>
       borderColor: colors.loginError,
     },
     errorText: {
+      ...roundedText,
       width: "76%",
       color: colors.loginError,
       fontSize: 12,
@@ -1101,6 +1227,7 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingLeft: 4,
     },
     otpErrorText: {
+      ...roundedText,
       width: "82%",
       color: colors.loginError,
       fontSize: 12,
@@ -1115,6 +1242,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginBottom: 10,
     },
     forgotText: {
+      ...roundedText,
       color: colors.loginCheckboxFill,
       fontSize: 12,
       fontWeight: "600",
@@ -1123,10 +1251,12 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 12,
     },
     accountHintText: {
+      ...roundedText,
       color: colors.loginHintText,
       fontSize: 12,
     },
     accountHintLink: {
+      ...roundedText,
       color: colors.loginCheckboxFill,
       textDecorationLine: "underline",
       fontWeight: "600",
@@ -1145,6 +1275,7 @@ const createStyles = (colors: typeof Colors.light) =>
       opacity: 0.7,
     },
     submitButtonText: {
+      ...roundedText,
       color: colors.loginTabActiveText,
       fontWeight: "700",
       fontSize: 16,
@@ -1154,13 +1285,16 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 12,
     },
     linkText: {
+      ...roundedText,
       color: colors.loginCheckboxFill,
       fontSize: 12,
       fontWeight: "600",
       textDecorationLine: "underline",
     },
     linkTextDisabled: {
+      ...roundedText,
       color: colors.loginHintText,
       textDecorationLine: "none",
     },
   });
+};

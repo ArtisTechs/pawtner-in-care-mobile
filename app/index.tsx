@@ -22,9 +22,6 @@ const RIPPLE_BASE = LOGO_SIZE;
 const MAX_RIPPLE = Math.sqrt(width * width + height * height) * 2;
 const RIPPLE_SCALE_TARGET = MAX_RIPPLE / RIPPLE_BASE;
 
-const TITLE_WIDTH = width * 0.7;
-const TITLE_HEIGHT = TITLE_WIDTH * 0.9;
-
 export default function Index() {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
@@ -35,10 +32,6 @@ export default function Index() {
   const ringOpacity = useRef(new Animated.Value(1)).current;
   const rippleScale = useRef(new Animated.Value(0)).current;
   const [isAnimationComplete, setIsAnimationComplete] = useState(false);
-
-  // Title values
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Logo entrance
@@ -91,32 +84,20 @@ export default function Index() {
           duration: 300,
           useNativeDriver: true,
         }).start(() => {
-          // Show title instantly at center (no fade)
-          titleOpacity.setValue(1);
-
-          setTimeout(() => {
-            Animated.timing(titleTranslateY, {
-              toValue: -height * 0.35,
-              duration: 1000,
-              easing: Easing.in(Easing.ease),
-              useNativeDriver: true,
-            }).start(() => {
-              setIsAnimationComplete(true);
-            });
-          }, 800);
+          setIsAnimationComplete(true);
         });
       });
     }, 2000);
 
-    return () => clearTimeout(rippleTimer);
+    return () => {
+      clearTimeout(rippleTimer);
+    };
   }, [
     logoOpacity,
     logoScale,
     ringOpacity,
     ringRotate,
     rippleScale,
-    titleOpacity,
-    titleTranslateY,
   ]);
 
   useEffect(() => {
@@ -194,23 +175,6 @@ export default function Index() {
         </View>
       </Animated.View>
 
-      {/* Title PNG — fades in at center, slides up, fades out */}
-      <Animated.View
-        style={[
-          styles.titleWrap,
-          {
-            opacity: titleOpacity,
-            transform: [{ translateY: titleTranslateY }],
-          },
-        ]}
-        pointerEvents="none"
-      >
-        <Image
-          source={require("../assets/images/title-logo.png")}
-          style={styles.titleImage}
-          resizeMode="contain"
-        />
-      </Animated.View>
     </View>
   );
 }
@@ -271,15 +235,5 @@ const styles = StyleSheet.create({
   logo: {
     width: LOGO_SIZE,
     height: LOGO_SIZE,
-  },
-  titleWrap: {
-    position: "absolute",
-    zIndex: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titleImage: {
-    width: TITLE_WIDTH,
-    height: TITLE_HEIGHT,
   },
 });

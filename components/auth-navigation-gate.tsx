@@ -23,14 +23,20 @@ export function AuthNavigationGate() {
     const topSegment = segments[0];
     const isAuthRoute = topSegment === "(auth)";
     const isRootIndex = pathname === "/";
+    const isGetStartedRoute = pathname === "/(auth)/get-started";
 
     if (!session && !isAuthRoute && !isRootIndex) {
       router.replace("/(auth)/login");
       return;
     }
 
-    if (session && isAuthRoute) {
-      router.replace("/(tabs)");
+    if (!session && isGetStartedRoute) {
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    if (session && isAuthRoute && !isGetStartedRoute) {
+      router.replace("/(auth)/get-started");
     }
   }, [isHydrating, pathname, rootNavigationState?.key, router, segments, session]);
 

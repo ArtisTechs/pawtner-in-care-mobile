@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 
+import { RoundedFontFamily } from "@/constants/theme";
+
 const sanitizeOtp = (value: string, length: number) =>
   value.replace(/\D/g, "").slice(0, length);
 
@@ -110,10 +112,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   boxText: {
+    fontFamily: RoundedFontFamily,
     fontSize: 22,
     fontWeight: "700",
   },
   hiddenInput: {
+    fontFamily: RoundedFontFamily,
     position: "absolute",
     opacity: 0,
     width: 1,

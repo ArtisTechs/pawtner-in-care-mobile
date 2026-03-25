@@ -42,7 +42,7 @@ export const validateAuthForm = (
 
   if (!values.password.trim()) {
     errors.password = ERROR_MESSAGES.passwordRequired;
-  } else if (!PASSWORD_REQUIREMENTS.test(values.password)) {
+  } else if (isSignUp && !PASSWORD_REQUIREMENTS.test(values.password)) {
     errors.password = ERROR_MESSAGES.passwordRequirements;
   }
 
