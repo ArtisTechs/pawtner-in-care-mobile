@@ -2,11 +2,11 @@ import { Colors, RoundedFontFamily } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { authStorage } from "@/services/auth/auth.storage";
+import { FullScreenLoader } from "@/components/ui/full-screen-loader";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   StyleSheet,
@@ -81,21 +81,7 @@ export default function GetStarted() {
   };
 
   if (!isVariantReady) {
-    return (
-      <View
-        style={[
-          styles.screen,
-          {
-            paddingBottom: insets.bottom,
-          },
-        ]}
-      >
-        <ActivityIndicator
-          color={colors.loginTabActiveBackground}
-          size="large"
-        />
-      </View>
-    );
+    return <FullScreenLoader subtitle="Preparing your welcome screen..." />;
   }
 
   return (

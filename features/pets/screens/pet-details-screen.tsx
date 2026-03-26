@@ -1,3 +1,4 @@
+import { PetDetailsActionBar } from "@/components/pets/pet-details-action-bar";
 import { PetDetailsBottomSheet } from "@/components/pets/pet-details-bottom-sheet";
 import { Colors } from "@/constants/theme";
 import { PET_ASSETS, getPetDetailsById } from "@/features/pets/pets.data";
@@ -17,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const IMAGE_HEIGHT_RATIO = 0.56;
+const ACTION_BAR_BASE_HEIGHT = 86;
 
 const normalizeParam = (value?: string | string[]) =>
   Array.isArray(value) ? value[0] : value;
@@ -67,6 +69,8 @@ export default function PetDetailsScreen() {
     () => (petId ? getPetDetailsById(petId, favoriteOverride) : null),
     [favoriteOverride, petId],
   );
+  const actionBarInset = Math.max(insets.bottom, 10);
+  const actionBarHeight = ACTION_BAR_BASE_HEIGHT + actionBarInset;
 
   const [isFavorite, setIsFavorite] = useState(Boolean(pet?.isFavorite));
 
@@ -134,11 +138,13 @@ export default function PetDetailsScreen() {
       </Pressable>
 
       <PetDetailsBottomSheet
-        bottomInset={insets.bottom}
+        bottomInset={actionBarHeight + 12}
         isFavorite={isFavorite}
         onToggleFavorite={() => setIsFavorite((currentValue) => !currentValue)}
         pet={pet}
       />
+
+      <PetDetailsActionBar bottomInset={insets.bottom} />
     </View>
   );
 }

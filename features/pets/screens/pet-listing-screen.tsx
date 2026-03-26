@@ -1,5 +1,6 @@
 import { PetCard } from "@/components/pets/pet-card";
 import { PetFilterChip } from "@/components/pets/pet-filter-chip";
+import { FullScreenLoader } from "@/components/ui/full-screen-loader";
 import { Colors, RoundedFontFamily } from "@/constants/theme";
 import {
   PET_ASSETS,
@@ -11,7 +12,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -26,6 +27,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MAX_CONTENT_WIDTH = 420;
+const PET_LIST_OPENING_LOADER_DELAY_MS = 700;
 
 export default function PetListingScreen() {
   const router = useRouter();
@@ -41,6 +43,15 @@ export default function PetListingScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<PetFilter>("all");
   const [pets, setPets] = useState(PET_LISTING_MOCK_DATA);
+  const [isOpeningLoaderVisible, setIsOpeningLoaderVisible] = useState(true);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setIsOpeningLoaderVisible(false);
+    }, PET_LIST_OPENING_LOADER_DELAY_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -167,6 +178,17 @@ export default function PetListingScreen() {
         start={{ x: 0, y: 0 }}
         style={styles.gradient}
       >
+        <View
+          style={[
+            styles.fixedHeaderContainer,
+            {
+              paddingTop: insets.top + 8,
+            },
+          ]}
+        >
+          {renderHeader()}
+        </View>
+
         <FlatList
           data={filteredPets}
           ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
@@ -179,11 +201,11 @@ export default function PetListingScreen() {
               </Text>
             </View>
           }
-          ListHeaderComponent={renderHeader}
+          style={styles.list}
           contentContainerStyle={[
             styles.listContent,
             {
-              paddingTop: insets.top + 8,
+              paddingTop: 4,
               paddingBottom: insets.bottom + 24,
             },
           ]}
@@ -198,6 +220,12 @@ export default function PetListingScreen() {
           showsVerticalScrollIndicator={false}
         />
       </LinearGradient>
+      <FullScreenLoader
+        absolute
+        backgroundColor="rgba(0, 0, 0, 0.24)"
+        subtitle="Loading the pets for you..."
+        visible={isOpeningLoaderVisible}
+      />
     </View>
   );
 }
@@ -213,6 +241,14 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
     },
     gradient: {
       flex: 1,
+    },
+    fixedHeaderContainer: {
+      width: "100%",
+      alignItems: "center",
+    },
+    list: {
+      flex: 1,
+      width: "100%",
     },
     listContent: {
       alignItems: "center",

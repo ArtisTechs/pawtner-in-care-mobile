@@ -64,6 +64,10 @@ export const Colors = {
     petDetailsTextPrimary: "#1E4E87",
     petDetailsTextSecondary: "#2B5F98",
     petDetailsOutline: "#2C6EB8",
+    petDetailsActionBarBackground: "#EDEEEF",
+    petDetailsActionIcon: "#2C6EB8",
+    petDetailsAdoptButtonBackground: "#2C6EB8",
+    petDetailsAdoptButtonText: "#FFFFFF",
   },
   dark: {
     text: "#ECEDEE",
@@ -122,6 +126,10 @@ export const Colors = {
     petDetailsTextPrimary: "#1E4E87",
     petDetailsTextSecondary: "#2B5F98",
     petDetailsOutline: "#2C6EB8",
+    petDetailsActionBarBackground: "#EDEEEF",
+    petDetailsActionIcon: "#2C6EB8",
+    petDetailsAdoptButtonBackground: "#2C6EB8",
+    petDetailsAdoptButtonText: "#FFFFFF",
   },
 };
 

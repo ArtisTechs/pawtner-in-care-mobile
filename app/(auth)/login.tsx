@@ -1,4 +1,5 @@
 import { AppToast } from "@/components/ui/app-toast";
+import { FullScreenLoader } from "@/components/ui/full-screen-loader";
 import { OtpCodeInput } from "@/components/ui/otp-code-input";
 import { ERROR_MESSAGES } from "@/constants/error-messages";
 import { Colors, RoundedFontFamily } from "@/constants/theme";
@@ -20,7 +21,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Image,
@@ -119,6 +119,9 @@ export default function Login() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingSubtitle, setLoadingSubtitle] = useState(
+    "Preparing your request...",
+  );
   const [isTitleAnimationDone, setIsTitleAnimationDone] = useState(false);
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
   const formTranslateY = useState(() => new Animated.Value(0))[0];
@@ -313,6 +316,7 @@ export default function Login() {
       return;
     }
 
+    setLoadingSubtitle("Sending OTP for your sign up...");
     setIsSubmitting(true);
 
     try {
@@ -333,6 +337,7 @@ export default function Login() {
       return;
     }
 
+    setLoadingSubtitle("Creating your account...");
     setIsSubmitting(true);
 
     try {
@@ -377,6 +382,7 @@ export default function Login() {
       return;
     }
 
+    setLoadingSubtitle("Sending password reset OTP...");
     setIsSubmitting(true);
 
     try {
@@ -401,6 +407,7 @@ export default function Login() {
       return;
     }
 
+    setLoadingSubtitle("Verifying your OTP...");
     setIsSubmitting(true);
 
     try {
@@ -430,6 +437,7 @@ export default function Login() {
       return;
     }
 
+    setLoadingSubtitle("Saving your new password...");
     setIsSubmitting(true);
 
     try {
@@ -460,6 +468,7 @@ export default function Login() {
       return;
     }
 
+    setLoadingSubtitle("Signing you in...");
     setIsSubmitting(true);
 
     try {
@@ -505,6 +514,7 @@ export default function Login() {
     }
 
     clearTransientErrors();
+    setLoadingSubtitle("Resending OTP...");
     setIsSubmitting(true);
 
     try {
@@ -1032,11 +1042,7 @@ export default function Login() {
               ]}
               onPress={handleSubmit}
             >
-              {isSubmitting ? (
-                <ActivityIndicator color={colors.loginTabActiveText} />
-              ) : (
-                <Text style={styles.submitButtonText}>{submitLabel}</Text>
-              )}
+              <Text style={styles.submitButtonText}>{submitLabel}</Text>
             </Pressable>
 
             {isOtpFlow && form.email.trim() ? (
@@ -1080,6 +1086,12 @@ export default function Login() {
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
+      <FullScreenLoader
+        absolute
+        backgroundColor={colors.loginCardBackground}
+        subtitle={loadingSubtitle}
+        visible={isSubmitting}
+      />
     </View>
   );
 }

@@ -110,19 +110,23 @@ export default function DashboardScreen() {
             showsHorizontalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.categoriesGap} />}
             renderItem={({ item }) => (
-              <DashboardCategoryButton
-                bubbleColor={colors.dashboardCategoryBubble}
-                iconSource={item.iconSource}
-                label={item.label}
-                labelColor={colors.dashboardHeaderText}
-                onPress={
-                  item.id === "adopt-pets"
-                    ? () => router.push("/pets")
-                    : undefined
-                }
-              />
-            )}
-          />
+                <DashboardCategoryButton
+                  bubbleColor={colors.dashboardCategoryBubble}
+                  iconSource={item.iconSource}
+                  label={item.label}
+                  labelColor={colors.dashboardHeaderText}
+                  onPress={
+                    item.id === "veterinary"
+                      ? () => router.push("/veterinary-clinics")
+                      : item.id === "adopt-pets"
+                        ? () => router.push("/pets")
+                        : item.id === "events"
+                          ? () => router.push("/events")
+                        : undefined
+                  }
+                />
+              )}
+            />
 
           <View style={styles.waitingHeader}>
             <Text style={styles.waitingTitle}>Waiting for you</Text>
