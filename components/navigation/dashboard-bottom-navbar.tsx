@@ -48,7 +48,9 @@ const NAV_ITEMS: NavItem[] = [
 
 const ROUTE_MAP: Partial<Record<DashboardBottomNavKey, Href>> = {
   home: "/(tabs)",
-  // TODO: add target routes when chat/community/profile screens are added.
+  chat: "/support",
+  community: "/community",
+  profile: "/profile",
 };
 
 export function DashboardBottomNavbar({
@@ -149,12 +151,6 @@ export function DashboardBottomNavbar({
             >
               <Text style={styles.sosText}>SOS</Text>
             </Pressable>
-            <View
-              style={[
-                styles.activeDot,
-                activeKey === "sos" && styles.activeDotVisible,
-              ]}
-            />
           </View>
 
           {NAV_ITEMS.slice(2).map((item) => (
@@ -238,8 +234,8 @@ const createStyles = (colors: typeof Colors.light) =>
     sosWrap: {
       alignItems: "center",
       justifyContent: "flex-end",
-      gap: 3,
       marginHorizontal: 10,
+      transform: [{ translateY: 4 }],
     },
     sosButton: {
       width: 52,

@@ -6,6 +6,7 @@ import { Colors, RoundedFontFamily } from "@/constants/theme";
 import {
   DASHBOARD_ASSETS,
   DASHBOARD_CATEGORIES,
+  type DashboardPromoItem,
   DASHBOARD_PROMO_ITEMS,
   DASHBOARD_WAITING_PETS,
 } from "@/features/dashboard/dashboard.data";
@@ -46,6 +47,11 @@ export default function DashboardScreen() {
     () => createStyles(colors, contentWidth),
     [colors, contentWidth],
   );
+  const handlePressPromoItem = (item: DashboardPromoItem) => {
+    if (item.id === "donate-banner") {
+      router.push("/donations");
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -98,6 +104,7 @@ export default function DashboardScreen() {
             itemHeight={112}
             itemWidth={promoWidth}
             items={DASHBOARD_PROMO_ITEMS}
+            onPressItem={handlePressPromoItem}
           />
 
           <Text style={styles.sectionTitle}>Categories</Text>
@@ -122,6 +129,8 @@ export default function DashboardScreen() {
                         ? () => router.push("/pets")
                         : item.id === "events"
                           ? () => router.push("/events")
+                          : item.id === "community"
+                            ? () => router.push("/community")
                         : undefined
                   }
                 />

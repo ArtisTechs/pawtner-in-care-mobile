@@ -1,7 +1,6 @@
 import { MAP_CONFIG } from "@/config/env";
 import React, { useMemo } from "react";
 import {
-  Image,
   StyleSheet,
   type StyleProp,
   View,
@@ -31,19 +30,14 @@ type ClinicLeafletMapProps = {
 
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-const RED_PIN_ICON = require("../../assets/images/red-pin-icon.png");
-const BLUE_PIN_ICON = require("../../assets/images/blue-pin-icon.png");
 
 const createMapHtml = ({
-  bluePinIconUrl,
   googleMapsApiKey,
   latitude,
   longitude,
   markers,
   userLocation,
-  redPinIconUrl,
 }: {
-  bluePinIconUrl: string;
   googleMapsApiKey: string;
   latitude: number;
   longitude: number;
@@ -52,11 +46,8 @@ const createMapHtml = ({
     latitude: number;
     longitude: number;
   } | null;
-  redPinIconUrl: string;
 }) => {
   const serializedMarkers = JSON.stringify(markers);
-  const serializedRedPinIconUrl = JSON.stringify(redPinIconUrl);
-  const serializedBluePinIconUrl = JSON.stringify(bluePinIconUrl);
   const serializedGoogleMapsApiKey = JSON.stringify(googleMapsApiKey);
   const serializedUserLocation = JSON.stringify(userLocation ?? null);
 
@@ -110,6 +101,13 @@ const createMapHtml = ({
       .leaflet-control-zoom {
         display: none;
       }
+
+      .clinic-name-tooltip {
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 14px;
+        padding: 3px 6px;
+      }
     </style>
   </head>
   <body>
@@ -121,13 +119,15 @@ const createMapHtml = ({
       (function () {
         const center = { lat: ${latitude}, lng: ${longitude} };
         const markers = ${serializedMarkers};
-        const redPinIconUrl = ${serializedRedPinIconUrl};
-        const bluePinIconUrl = ${serializedBluePinIconUrl};
         const googleMapsApiKey = ${serializedGoogleMapsApiKey};
         const userLocation = ${serializedUserLocation};
         const loadingOverlay = document.getElementById("map-loading");
         let hasMapInitialized = false;
         let googleInitTimeout = null;
+        const pinIconCache = {
+          selected: null,
+          default: null,
+        };
 
         const postMarkerPress = (markerId) => {
           const payload = JSON.stringify({
@@ -164,12 +164,57 @@ const createMapHtml = ({
           }
         };
 
+        const createPinIconUrl = (isSelected) => {
+          const primaryStart = isSelected ? "#FF6B72" : "#56A5FF";
+          const primaryEnd = isSelected ? "#EA3B45" : "#1C76E8";
+          const ringColor = isSelected ? "#FFD9DC" : "#D8EAFF";
+          const innerColor = isSelected ? "#FFF7F8" : "#F9FCFF";
+          const shadowOpacity = isSelected ? "0.30" : "0.24";
+          const svg =
+            '<svg xmlns="http://www.w3.org/2000/svg" width="50" height="62" viewBox="0 0 50 62">' +
+            '<defs>' +
+            '<linearGradient id="pinGrad" x1="25" y1="4" x2="25" y2="40" gradientUnits="userSpaceOnUse">' +
+            '<stop offset="0" stop-color="' +
+            primaryStart +
+            '"/>' +
+            '<stop offset="1" stop-color="' +
+            primaryEnd +
+            '"/>' +
+            "</linearGradient>" +
+            "</defs>" +
+            '<ellipse cx="25" cy="57" rx="10" ry="4.5" fill="#0F172A" fill-opacity="' +
+            shadowOpacity +
+            '"/>' +
+            '<path d="M25 4c-8.8 0-16 7.2-16 16 0 11.4 13.6 26.4 16 29.1 2.4-2.7 16-17.7 16-29.1 0-8.8-7.2-16-16-16z" fill="url(#pinGrad)"/>' +
+            '<circle cx="25" cy="20" r="8.3" fill="' +
+            innerColor +
+            '" fill-opacity="0.98"/>' +
+            '<circle cx="25" cy="20" r="11.5" fill="none" stroke="' +
+            ringColor +
+            '" stroke-opacity="0.94" stroke-width="2"/>' +
+            "</svg>";
+
+          return (
+            "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg)
+          );
+        };
+
+        const getPinIconUrl = (isSelected) => {
+          const cacheKey = isSelected ? "selected" : "default";
+
+          if (!pinIconCache[cacheKey]) {
+            pinIconCache[cacheKey] = createPinIconUrl(isSelected);
+          }
+
+          return pinIconCache[cacheKey];
+        };
+
         const createLeafletIcon = (isSelected) =>
           L.icon({
-            iconUrl: isSelected ? redPinIconUrl : bluePinIconUrl,
-            iconSize: [42, 46],
-            iconAnchor: [21, 45],
-            tooltipAnchor: [0, -34],
+            iconUrl: getPinIconUrl(isSelected),
+            iconSize: isSelected ? [50, 62] : [46, 58],
+            iconAnchor: isSelected ? [25, 50] : [23, 47],
+            tooltipAnchor: isSelected ? [0, -30] : [0, -28],
           });
 
         const hasValidUserLocation =
@@ -215,8 +260,9 @@ const createMapHtml = ({
 
             if (marker.name) {
               renderedMarker.bindTooltip(marker.name, {
+                className: "clinic-name-tooltip",
                 direction: "top",
-                offset: [0, -34],
+                offset: [0, -4],
                 opacity: 0.9,
               });
 
@@ -317,9 +363,13 @@ const createMapHtml = ({
               map: googleMap,
               title: marker.name || "",
               icon: {
-                url: marker.isSelected ? redPinIconUrl : bluePinIconUrl,
-                scaledSize: new window.google.maps.Size(42, 46),
-                anchor: new window.google.maps.Point(21, 45),
+                url: getPinIconUrl(Boolean(marker.isSelected)),
+                scaledSize: marker.isSelected
+                  ? new window.google.maps.Size(50, 62)
+                  : new window.google.maps.Size(46, 58),
+                anchor: marker.isSelected
+                  ? new window.google.maps.Point(25, 50)
+                  : new window.google.maps.Point(23, 47),
               },
               zIndex: marker.isSelected ? 2 : 1,
               animation: marker.isSelected
@@ -332,7 +382,7 @@ const createMapHtml = ({
             if (marker.name) {
               infoWindow = new window.google.maps.InfoWindow({
                 content:
-                  '<div style="font-size:12px;font-weight:700;line-height:16px;color:#1f4a80;padding:2px 4px;">' +
+                  '<div style="font-size:11px;font-weight:700;line-height:14px;color:#1f4a80;padding:2px 4px;">' +
                   escapeHtml(marker.name) +
                   "</div>",
               });
@@ -446,35 +496,23 @@ export function ClinicLeafletMap({
   style,
   userLocation,
 }: ClinicLeafletMapProps) {
-  const redPinIconUri = useMemo(
-    () => Image.resolveAssetSource(RED_PIN_ICON).uri,
-    [],
-  );
-  const bluePinIconUri = useMemo(
-    () => Image.resolveAssetSource(BLUE_PIN_ICON).uri,
-    [],
-  );
   const googleMapsApiKey = MAP_CONFIG.googleMapsApiKey;
   const source = useMemo(
     () => ({
       html: createMapHtml({
-        bluePinIconUrl: bluePinIconUri,
         googleMapsApiKey,
         latitude,
         longitude,
         markers,
         userLocation,
-        redPinIconUrl: redPinIconUri,
       }),
     }),
     [
-      bluePinIconUri,
       googleMapsApiKey,
       latitude,
       longitude,
       markers,
       userLocation,
-      redPinIconUri,
     ],
   );
 

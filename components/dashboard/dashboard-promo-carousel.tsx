@@ -1,12 +1,13 @@
 import type { DashboardPromoItem } from "@/features/dashboard/dashboard.data";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Image, ScrollView, StyleSheet, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 type DashboardPromoCarouselProps = {
   autoPlayIntervalMs?: number;
   itemHeight: number;
   itemWidth: number;
   items: DashboardPromoItem[];
+  onPressItem?: (item: DashboardPromoItem) => void;
 };
 
 export function DashboardPromoCarousel({
@@ -14,6 +15,7 @@ export function DashboardPromoCarousel({
   itemHeight,
   itemWidth,
   items,
+  onPressItem,
 }: DashboardPromoCarouselProps) {
   const styles = useMemo(() => createStyles(itemHeight, itemWidth), [
     itemHeight,
@@ -64,9 +66,17 @@ export function DashboardPromoCarousel({
         }
       >
         {items.map((item) => (
-          <View key={item.id} style={styles.slide}>
+          <Pressable
+            key={item.id}
+            accessibilityRole="button"
+            onPress={() => onPressItem?.(item)}
+            style={({ pressed }) => [
+              styles.slide,
+              pressed && onPressItem && styles.slidePressed,
+            ]}
+          >
             <Image source={item.image} style={styles.image} resizeMode="cover" />
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
 
@@ -95,6 +105,9 @@ const createStyles = (itemHeight: number, itemWidth: number) =>
     slide: {
       width: itemWidth,
       height: itemHeight,
+    },
+    slidePressed: {
+      opacity: 0.94,
     },
     image: {
       width: "100%",

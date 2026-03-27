@@ -19,6 +19,7 @@ export function ClinicInfoBadge({
 }: ClinicInfoBadgeProps) {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
+  const badgeContentColor = colors.petDetailsTextPrimary;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isCompactValue = value.length > 8;
 
@@ -27,15 +28,14 @@ export function ClinicInfoBadge({
       accessibilityRole={onPress ? "button" : undefined}
       disabled={!onPress}
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && onPress && styles.pressed]}
+      style={({ pressed }) => [
+        styles.card,
+        pressed && onPress && styles.pressed,
+      ]}
     >
       {iconName ? (
         <View style={styles.iconWrap}>
-          <MaterialIcons
-            color={colors.dashboardBottomIcon}
-            name={iconName}
-            size={16}
-          />
+          <MaterialIcons color={badgeContentColor} name={iconName} size={16} />
         </View>
       ) : null}
       <Text
@@ -68,7 +68,7 @@ const createStyles = (colors: typeof Colors.light) =>
       justifyContent: "center",
       paddingHorizontal: 10,
       paddingVertical: 8,
-      shadowColor: colors.dashboardShadow,
+      shadowColor: "rgba(255, 255, 255, 0.28)",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.15,
       shadowRadius: 4,
@@ -98,7 +98,7 @@ const createStyles = (colors: typeof Colors.light) =>
     label: {
       marginTop: 2,
       fontFamily: RoundedFontFamily,
-      color: colors.petDetailsTextSecondary,
+      color: colors.petDetailsTextPrimary,
       fontSize: 12,
       lineHeight: 15,
       fontWeight: "700",
