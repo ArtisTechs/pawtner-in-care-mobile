@@ -6,14 +6,16 @@ import { Colors, RoundedFontFamily } from "@/constants/theme";
 import {
   DASHBOARD_ASSETS,
   DASHBOARD_CATEGORIES,
-  type DashboardPromoItem,
   DASHBOARD_PROMO_ITEMS,
   DASHBOARD_WAITING_PETS,
+  type DashboardPromoItem,
 } from "@/features/dashboard/dashboard.data";
+import { NOTIFICATION_MOCK_DATA } from "@/features/notifications/notifications.data";
 import { getPetDetailsById } from "@/features/pets/pets.data";
 import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useRouter } from "expo-router";
 import React, { useMemo } from "react";
 import {
   FlatList,
@@ -27,7 +29,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 
 const MAX_CONTENT_WIDTH = 420;
 
@@ -43,6 +44,10 @@ export default function DashboardScreen() {
   const firstName = session?.user.firstName?.trim() ?? "";
   const lastName = session?.user.lastName?.trim() ?? "";
   const displayName = `${firstName} ${lastName}`.trim() || "Pawtner User";
+  const hasUnreadNotifications = useMemo(
+    () => NOTIFICATION_MOCK_DATA.some((notification) => !notification.isRead),
+    [],
+  );
   const styles = useMemo(
     () => createStyles(colors, contentWidth),
     [colors, contentWidth],
@@ -60,7 +65,10 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={colors.dashboardHeaderBackground}
+      />
 
       <View
         style={[
@@ -82,12 +90,22 @@ export default function DashboardScreen() {
             </Text>
           </View>
 
-          <Pressable style={styles.notificationButton}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/notification")}
+            style={({ pressed }) => [
+              styles.notificationButton,
+              pressed && styles.notificationButtonPressed,
+            ]}
+          >
             <MaterialIcons
               color={colors.dashboardBottomIcon}
               name="notifications-none"
               size={27}
             />
+            {hasUnreadNotifications ? (
+              <View style={styles.notificationUnreadDot} />
+            ) : null}
           </Pressable>
         </View>
       </View>
@@ -118,31 +136,32 @@ export default function DashboardScreen() {
             horizontal
             data={DASHBOARD_CATEGORIES}
             keyExtractor={(item) => item.id}
+            style={styles.edgeToEdgeList}
             contentContainerStyle={styles.categoriesListContent}
             showsHorizontalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.categoriesGap} />}
             renderItem={({ item }) => (
-                <DashboardCategoryButton
-                  bubbleColor={colors.dashboardCategoryBubble}
-                  iconSource={item.iconSource}
-                  label={item.label}
-                  labelColor={colors.dashboardHeaderText}
-                  onPress={
-                    item.id === "veterinary"
-                      ? () => router.push("/veterinary-clinics")
-                      : item.id === "adopt-pets"
-                        ? () => router.push("/pets")
-                        : item.id === "events"
-                          ? () => router.push("/events")
-                          : item.id === "volunteer"
-                            ? () => router.push("/volunteer")
-                          : item.id === "community"
-                            ? () => router.push("/community")
-                        : undefined
-                  }
-                />
-              )}
-            />
+              <DashboardCategoryButton
+                bubbleColor={colors.dashboardCategoryBubble}
+                iconSource={item.iconSource}
+                label={item.label}
+                labelColor={colors.dashboardHeaderText}
+                onPress={
+                  item.id === "veterinary"
+                    ? () => router.push("/veterinary-clinics")
+                    : item.id === "adopt-pets"
+                      ? () => router.push("/pets")
+                      : item.id === "events"
+                        ? () => router.push("/events")
+                        : item.id === "volunteer"
+                          ? () => router.push("/volunteer")
+                          : item.id === "heroes-wall"
+                            ? () => router.push("/heroes-wall")
+                          : undefined
+                }
+              />
+            )}
+          />
 
           <View style={styles.waitingHeader}>
             <Text style={styles.waitingTitle}>Waiting for you</Text>
@@ -155,6 +174,7 @@ export default function DashboardScreen() {
             horizontal
             data={DASHBOARD_WAITING_PETS}
             keyExtractor={(item) => item.id}
+            style={styles.edgeToEdgeList}
             contentContainerStyle={styles.petListContent}
             showsHorizontalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.petListGap} />}
@@ -220,11 +240,11 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       height: 76,
     },
     headerSubtitle: {
-      marginTop: -2,
+      marginTop: -8,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 8,
-      lineHeight: 14,
+      fontSize: 12,
+      lineHeight: 13,
       fontWeight: "700",
       fontStyle: "italic",
     },
@@ -237,6 +257,20 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       borderRadius: 999,
       alignItems: "center",
       justifyContent: "center",
+    },
+    notificationButtonPressed: {
+      opacity: 0.84,
+    },
+    notificationUnreadDot: {
+      position: "absolute",
+      top: 8,
+      right: 8,
+      width: 9,
+      height: 9,
+      borderRadius: 999,
+      backgroundColor: "#FF3B30",
+      borderWidth: 1,
+      borderColor: colors.dashboardHeaderBackground,
     },
     scrollContent: {
       width: "100%",
@@ -271,9 +305,13 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       lineHeight: 22,
       fontWeight: "900",
     },
+    edgeToEdgeList: {
+      marginHorizontal: -24,
+    },
     categoriesListContent: {
       marginTop: 14,
-      paddingRight: 6,
+      paddingLeft: 24,
+      paddingRight: 24,
       paddingBottom: 1,
     },
     categoriesGap: {
@@ -301,8 +339,10 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
     },
     petListContent: {
       marginTop: 12,
-      paddingRight: 8,
-      paddingBottom: 8,
+      paddingLeft: 24,
+      paddingTop: 4,
+      paddingRight: 24,
+      paddingBottom: 12,
     },
     petListGap: {
       width: 12,

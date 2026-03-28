@@ -1,7 +1,6 @@
 import { ChatBubble } from "@/components/support/chat-bubble";
 import { ChatHeader } from "@/components/support/chat-header";
 import { ChatInput } from "@/components/support/chat-input";
-import { DashboardBottomNavbar } from "@/components/navigation/dashboard-bottom-navbar";
 import { Colors } from "@/constants/theme";
 import { SUPPORT_ASSETS } from "@/features/support/support.data";
 import type {
@@ -10,6 +9,7 @@ import type {
 } from "@/features/support/support.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
@@ -25,7 +25,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const MAX_CONTENT_WIDTH = 420;
 const BOT_REPLY_DELAY_MS = 650;
 const INITIAL_BOT_PROMPT = "How can I help you?";
-const NAVBAR_RESERVED_SPACE = 78;
 const INPUT_EXTRA_BOTTOM_PADDING = 14;
 
 const createChatMessage = (
@@ -57,6 +56,7 @@ const buildBotReply = (userMessage: string) => {
 };
 
 export default function SupportChatScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const insets = useSafeAreaInsets();
@@ -116,9 +116,21 @@ export default function SupportChatScreen() {
     replyTimerIdsRef.current.push(timerId);
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/(tabs)");
+  };
+
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.loginHeaderGradientStart}
+      />
 
       <LinearGradient
         colors={[
@@ -138,6 +150,8 @@ export default function SupportChatScreen() {
           <View style={styles.contentWrap}>
             <ChatHeader
               avatarSource={SUPPORT_ASSETS.dogBotIcon}
+              backIconSource={SUPPORT_ASSETS.backIcon}
+              onPressBack={handleBack}
               titleText="DOG BOT"
               topInset={insets.top}
             />
@@ -162,15 +176,11 @@ export default function SupportChatScreen() {
               value={draftMessage}
               onChangeText={setDraftMessage}
               onSend={handleSendMessage}
-              bottomInset={
-                insets.bottom + NAVBAR_RESERVED_SPACE + INPUT_EXTRA_BOTTOM_PADDING
-              }
+              bottomInset={insets.bottom + INPUT_EXTRA_BOTTOM_PADDING}
             />
           </View>
         </KeyboardAvoidingView>
       </LinearGradient>
-
-      <DashboardBottomNavbar activeKey="chat" />
     </View>
   );
 }

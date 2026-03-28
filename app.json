@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/logo-app.png",
     "scheme": "pawtnerincaremobile",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true

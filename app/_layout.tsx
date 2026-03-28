@@ -63,14 +63,15 @@ export default function RootLayout() {
               }}
             >
               <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="events" />
               <Stack.Screen name="volunteer" />
+              <Stack.Screen name="heroes-wall" />
               <Stack.Screen name="donations" />
+              <Stack.Screen name="sos" />
               <Stack.Screen name="modal" options={{ presentation: "modal" }} />
             </Stack>
-            <StatusBar style="auto" />
+            <StatusBar style="auto" backgroundColor={themeColors.background} />
           </View>
         </ThemeProvider>
       </GestureHandlerRootView>

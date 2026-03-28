@@ -7,7 +7,7 @@ import {
   type BottomFilterSection,
   FilterBottomModal,
 } from "@/components/ui/filter-bottom-modal";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   createCalendarDate,
   getMonthTitle,
@@ -313,7 +313,10 @@ export default function EventsScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.dashboardScreenBackground}
+      />
 
       <View
         style={[
@@ -465,12 +468,11 @@ const createStyles = (
       height: 24,
     },
     headerTitle: {
-      ...roundedText,
+      fontFamily: DisplayFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 16,
-      lineHeight: 22,
-      fontWeight: "900",
-      letterSpacing: 0.8,
+      fontSize: 32,
+      lineHeight: 32,
+      letterSpacing: 0.6,
     },
     panelWrap: {
       flex: 1,

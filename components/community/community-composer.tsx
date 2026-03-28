@@ -1,5 +1,8 @@
 import { Colors, RoundedFontFamily } from "@/constants/theme";
-import { resolveImageSource } from "@/features/community/community.data";
+import {
+  resolveImageSource,
+  resolveOptionalImageSource,
+} from "@/features/community/community.data";
 import type {
   CommunityImageSource,
   CommunityPostMediaType,
@@ -36,6 +39,7 @@ export function CommunityComposer({
   const [selectedMediaType, setSelectedMediaType] =
     useState<CommunityPostMediaType | null>(null);
   const canPost = draftCaption.trim().length > 0 || Boolean(selectedMediaUri);
+  const avatarSource = resolveOptionalImageSource(avatar);
 
   const clearSelectedMedia = () => {
     setSelectedMediaUri(null);
@@ -91,7 +95,17 @@ export function CommunityComposer({
   return (
     <View style={styles.card}>
       <View style={styles.inputRow}>
-        <Image source={resolveImageSource(avatar)} style={styles.avatar} resizeMode="cover" />
+        {avatarSource ? (
+          <Image source={avatarSource} style={styles.avatar} resizeMode="cover" />
+        ) : (
+          <View style={styles.avatarFallback}>
+            <MaterialIcons
+              color={colors.dashboardBottomIcon}
+              name="person"
+              size={24}
+            />
+          </View>
+        )}
 
         <TextInput
           value={draftCaption}
@@ -220,6 +234,15 @@ const createStyles = (colors: typeof Colors.light) =>
       borderRadius: 20,
       backgroundColor: "rgba(44, 110, 184, 0.14)",
       marginTop: 1,
+    },
+    avatarFallback: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "rgba(44, 110, 184, 0.14)",
+      marginTop: 1,
+      alignItems: "center",
+      justifyContent: "center",
     },
     input: {
       flex: 1,

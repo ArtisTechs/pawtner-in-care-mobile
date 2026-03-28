@@ -8,17 +8,22 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 
 type PetDetailsBottomSheetProps = {
+  animatedIndex?: SharedValue<number>;
   bottomInset: number;
   isFavorite: boolean;
+  onSheetChange?: (index: number) => void;
   onToggleFavorite: () => void;
   pet: PetDetailsItem;
 };
 
 export function PetDetailsBottomSheet({
+  animatedIndex,
   bottomInset,
   isFavorite,
+  onSheetChange,
   onToggleFavorite,
   pet,
 }: PetDetailsBottomSheetProps) {
@@ -34,12 +39,14 @@ export function PetDetailsBottomSheet({
 
   return (
     <BottomSheet
+      animatedIndex={animatedIndex}
       index={0}
       snapPoints={snapPoints}
       backgroundStyle={styles.sheetBackground}
       enableDynamicSizing={false}
       enablePanDownToClose={false}
       handleIndicatorStyle={styles.handleIndicator}
+      onChange={onSheetChange}
       style={styles.sheetShadow}
     >
       <BottomSheetScrollView

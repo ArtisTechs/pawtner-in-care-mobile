@@ -91,7 +91,10 @@ export default function DonationIntroScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.loginHeaderGradientStart}
+      />
 
       <View style={styles.content}>
         <LinearGradient

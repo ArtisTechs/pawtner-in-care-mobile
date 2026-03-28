@@ -115,7 +115,10 @@ export default function Index() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.splashBackground }]}>
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <StatusBar
+        style={colorScheme === "dark" ? "light" : "dark"}
+        backgroundColor={colors.splashBackground}
+      />
 
       {/* Ripple */}
       <Animated.View

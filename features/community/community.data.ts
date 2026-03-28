@@ -3,17 +3,17 @@ import type {
   CommunityPost,
   CreateCommunityPostInput,
 } from "@/features/community/community.types";
+import type { ImageSourcePropType } from "react-native";
 
 const HASHTAG_PATTERN = /#[A-Za-z0-9_]+/g;
 
 export const COMMUNITY_ASSETS = {
   backIcon: require("../../assets/images/back-icon.png"),
-  currentUserAvatar: require("../../assets/images/cat.png"),
 } as const;
 
 export const COMMUNITY_CURRENT_USER = {
   name: "Pawtner User",
-  avatar: COMMUNITY_ASSETS.currentUserAvatar,
+  avatar: "",
   isVerified: false,
 } as const;
 
@@ -57,6 +57,21 @@ export const getCommunityPosts = () =>
 
 export const resolveImageSource = (source: CommunityImageSource) => {
   return typeof source === "string" ? { uri: source } : source;
+};
+
+export const resolveOptionalImageSource = (
+  source?: CommunityImageSource | null,
+): ImageSourcePropType | null => {
+  if (!source) {
+    return null;
+  }
+
+  if (typeof source === "string") {
+    const normalizedSource = source.trim();
+    return normalizedSource ? { uri: normalizedSource } : null;
+  }
+
+  return source;
 };
 
 export const extractHashtags = (caption: string) => {

@@ -234,7 +234,10 @@ export default function VeterinaryClinicsScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.loginHeaderGradientStart}
+      />
 
       <LinearGradient
         colors={[

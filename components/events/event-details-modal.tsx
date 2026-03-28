@@ -1,4 +1,5 @@
 import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
+import { EVENTS_ASSETS } from "@/features/events/events.data";
 import type { EventItem } from "@/features/events/events.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -14,6 +15,12 @@ import {
   View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type EventDetailsModalProps = {
@@ -35,6 +42,8 @@ const resolveEventImageSource = (eventImage?: EventItem["image"]) => {
 
   return eventImage;
 };
+
+const AnimatedPosterLayer = Animated.createAnimatedComponent(Pressable);
 
 const createEventMeta = (event: EventItem) => {
   const hashBase = event.id
@@ -59,6 +68,19 @@ export function EventDetailsModal({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const snapPoints = useMemo(() => ["22%", "82%"], []);
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const bottomSheetAnimatedIndex = useSharedValue(0);
+  const posterAnimatedStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      bottomSheetAnimatedIndex.value,
+      [0, 1],
+      [0, -120],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      transform: [{ translateY }],
+    };
+  });
 
   if (!event) {
     return null;
@@ -82,45 +104,53 @@ export function EventDetailsModal({
         <View style={styles.root}>
           <Pressable style={styles.backdrop} onPress={onClose} />
 
-          <Pressable style={styles.posterLayer} onPress={handleExpandDetails}>
+          <AnimatedPosterLayer
+            onPress={handleExpandDetails}
+            style={[styles.posterLayer, posterAnimatedStyle]}
+          >
             {imageSource ? (
               <Image source={imageSource} style={styles.posterImage} resizeMode="cover" />
             ) : (
               <View style={styles.posterFallback} />
             )}
 
-            <View
-              style={[
-                styles.posterTopBar,
-                {
-                  paddingTop: insets.top + 8,
-                },
-              ]}
-            >
-              <Pressable
-                accessibilityRole="button"
-                onPress={onClose}
-                style={({ pressed }) => [styles.topIconButton, pressed && styles.iconPressed]}
-              >
-                <MaterialIcons color={colors.white} name="arrow-back" size={22} />
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => onPressFacebook?.(event)}
-                style={({ pressed }) => [styles.topIconButton, pressed && styles.iconPressed]}
-              >
-                <FontAwesome color={colors.white} name="facebook" size={20} />
-              </Pressable>
-            </View>
-
             <Pressable style={styles.swipeHintWrap} onPress={handleExpandDetails}>
               <MaterialIcons color={colors.white} name="keyboard-arrow-up" size={22} />
               <Text style={styles.swipeHintText}>SWIPE UP FOR MORE INFO</Text>
             </Pressable>
-          </Pressable>
+          </AnimatedPosterLayer>
+
+          <View
+            style={[
+              styles.posterTopBar,
+              {
+                paddingTop: insets.top + 8,
+              },
+            ]}
+          >
+            <Pressable
+              accessibilityRole="button"
+              onPress={onClose}
+              style={({ pressed }) => [styles.topIconButton, pressed && styles.iconPressed]}
+            >
+              <Image
+                source={EVENTS_ASSETS.backIcon}
+                style={styles.backIcon}
+                resizeMode="contain"
+              />
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onPressFacebook?.(event)}
+              style={({ pressed }) => [styles.topIconButton, pressed && styles.iconPressed]}
+            >
+              <FontAwesome color={colors.white} name="facebook" size={20} />
+            </Pressable>
+          </View>
 
           <BottomSheet
+            animatedIndex={bottomSheetAnimatedIndex}
             ref={bottomSheetRef}
             index={0}
             snapPoints={snapPoints}
@@ -230,6 +260,10 @@ const createStyles = (colors: typeof Colors.light) =>
       backgroundColor: "rgba(8, 21, 37, 0.34)",
       alignItems: "center",
       justifyContent: "center",
+    },
+    backIcon: {
+      width: 24,
+      height: 24,
     },
     iconPressed: {
       opacity: 0.82,

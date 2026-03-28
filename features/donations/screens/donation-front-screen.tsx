@@ -95,7 +95,7 @@ export default function DonationFrontScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       <View style={styles.contentWrap}>
         <View

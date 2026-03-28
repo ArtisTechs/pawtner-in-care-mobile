@@ -180,7 +180,11 @@ export default function VeterinaryClinicDetailsScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       <ClinicLeafletMap
         latitude={clinic.latitude}

@@ -95,7 +95,10 @@ export default function CommunityScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={colors.loginCardBackground}
+      />
 
       <View
         style={[

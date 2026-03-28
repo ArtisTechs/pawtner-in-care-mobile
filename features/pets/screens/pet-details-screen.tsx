@@ -15,6 +15,12 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const IMAGE_HEIGHT_RATIO = 0.56;
@@ -69,14 +75,29 @@ export default function PetDetailsScreen() {
     () => (petId ? getPetDetailsById(petId, favoriteOverride) : null),
     [favoriteOverride, petId],
   );
+  const bottomSheetAnimatedIndex = useSharedValue(0);
   const actionBarInset = Math.max(insets.bottom, 10);
   const actionBarHeight = ACTION_BAR_BASE_HEIGHT + actionBarInset;
 
   const [isFavorite, setIsFavorite] = useState(Boolean(pet?.isFavorite));
+  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
 
   useEffect(() => {
     setIsFavorite(Boolean(pet?.isFavorite));
   }, [pet?.id, pet?.isFavorite]);
+
+  const heroAnimatedStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      bottomSheetAnimatedIndex.value,
+      [0, 1],
+      [0, -120],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      transform: [{ translateY }],
+    };
+  });
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -109,15 +130,21 @@ export default function PetDetailsScreen() {
   const imageSource = resolveImageSource(pet.image);
 
   return (
-    <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
-
-      <Image source={imageSource} style={styles.heroImage} resizeMode="cover" />
-
-      <LinearGradient
-        colors={["rgba(8, 28, 52, 0)", "rgba(8, 28, 52, 0.35)"]}
-        style={styles.heroOverlay}
+      <View style={styles.screen}>
+      <StatusBar
+        barStyle={isSheetExpanded ? "dark-content" : "light-content"}
+        backgroundColor="transparent"
+        translucent
       />
+
+      <Animated.View style={[styles.heroVisualWrap, heroAnimatedStyle]}>
+        <Image source={imageSource} style={styles.heroImage} resizeMode="cover" />
+
+        <LinearGradient
+          colors={["rgba(8, 28, 52, 0)", "rgba(8, 28, 52, 0.35)"]}
+          style={styles.heroOverlay}
+        />
+      </Animated.View>
 
       <Pressable
         accessibilityRole="button"
@@ -138,8 +165,10 @@ export default function PetDetailsScreen() {
       </Pressable>
 
       <PetDetailsBottomSheet
+        animatedIndex={bottomSheetAnimatedIndex}
         bottomInset={actionBarHeight + 12}
         isFavorite={isFavorite}
+        onSheetChange={(index) => setIsSheetExpanded(index >= 1)}
         onToggleFavorite={() => setIsFavorite((currentValue) => !currentValue)}
         pet={pet}
       />
@@ -155,20 +184,20 @@ const createStyles = (colors: typeof Colors.light) =>
       flex: 1,
       backgroundColor: colors.dashboardScreenBackground,
     },
-    heroImage: {
+    heroVisualWrap: {
       position: "absolute",
       top: 0,
       left: 0,
       right: 0,
-      width: "100%",
       height: `${IMAGE_HEIGHT_RATIO * 100}%`,
+      overflow: "hidden",
+    },
+    heroImage: {
+      width: "100%",
+      height: "100%",
     },
     heroOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      height: `${IMAGE_HEIGHT_RATIO * 100}%`,
+      ...StyleSheet.absoluteFillObject,
     },
     backButton: {
       position: "absolute",

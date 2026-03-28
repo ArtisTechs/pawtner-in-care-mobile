@@ -1,6 +1,6 @@
 import { RoundedFontFamily } from "@/constants/theme";
-import { PET_ASSETS } from "@/features/pets/pets.data";
 import type { DashboardPetItem } from "@/features/dashboard/dashboard.data";
+import { PET_ASSETS } from "@/features/pets/pets.data";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React from "react";
 import {
@@ -37,7 +37,7 @@ export function DashboardPetCard({
       disabled={!onPress}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.card,
+        styles.cardPressable,
         pressed && onPress && styles.cardPressed,
         {
           backgroundColor: cardBackgroundColor,
@@ -45,22 +45,33 @@ export function DashboardPetCard({
         },
       ]}
     >
-      <Image source={imageSource} style={styles.image} resizeMode="cover" />
-      <View style={styles.content}>
-        <Text numberOfLines={1} style={[styles.name, { color: textColor }]}>
-          {item.name}
-        </Text>
-        <Text numberOfLines={1} style={[styles.detail, { color: subtitleColor }]}>
-          {item.sex}
-        </Text>
-        <Text numberOfLines={1} style={[styles.detail, { color: subtitleColor }]}>
-          {item.age}
-        </Text>
-        <View style={styles.metaRow}>
-          <Text numberOfLines={1} style={[styles.metaText, { color: subtitleColor }]}>
-            {item.vaccinated ? "Vaccinated" : "Not Vaccinated"}
+      <View style={styles.cardSurface}>
+        <Image source={imageSource} style={styles.image} resizeMode="cover" />
+        <View style={styles.content}>
+          <Text numberOfLines={1} style={[styles.name, { color: textColor }]}>
+            {item.name}
           </Text>
-          <MaterialIcons color={subtitleColor} name="pets" size={14} />
+          <Text
+            numberOfLines={1}
+            style={[styles.detail, { color: subtitleColor }]}
+          >
+            {item.sex}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[styles.detail, { color: subtitleColor }]}
+          >
+            {item.age}
+          </Text>
+          <View style={styles.metaRow}>
+            <Text
+              numberOfLines={1}
+              style={[styles.metaText, { color: subtitleColor }]}
+            >
+              {item.vaccinated ? "Vaccinated" : "Not Vaccinated"}
+            </Text>
+            <MaterialIcons color={subtitleColor} name="pets" size={14} />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -88,14 +99,19 @@ const resolveImageSource = (
 };
 
 const styles = StyleSheet.create({
-  card: {
+  cardPressable: {
     width: 102,
+    marginVertical: 3,
+    borderRadius: 12,
+    overflow: "visible",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cardSurface: {
     borderRadius: 12,
     overflow: "hidden",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 4,
   },
   cardPressed: {
     opacity: 0.92,

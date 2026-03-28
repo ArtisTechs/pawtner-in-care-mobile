@@ -1,5 +1,6 @@
 import { SosCaptureButton } from "@/components/sos/sos-capture-button";
 import { SosImagePreview } from "@/components/sos/sos-image-preview";
+import { SosActionButton } from "@/components/sos/sos-action-button";
 import { SosUploadButton } from "@/components/sos/sos-upload-button";
 import { AppToast } from "@/components/ui/app-toast";
 import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
@@ -39,6 +40,10 @@ export default function SosReportScreen() {
     [colors, contentWidth],
   );
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+  const [pendingSourceType, setPendingSourceType] = useState<SosImageSourceType | null>(
+    null,
+  );
   const [sourceType, setSourceType] = useState<SosImageSourceType | null>(null);
   const [isSelectingImage, setIsSelectingImage] = useState(false);
   const [isCameraReady, setIsCameraReady] = useState(false);
@@ -54,9 +59,33 @@ export default function SosReportScreen() {
     imageUri: string,
     nextSourceType: SosImageSourceType,
   ) => {
+    setPendingImageUri(null);
+    setPendingSourceType(null);
     setSelectedImageUri(imageUri);
     setSourceType(nextSourceType);
-    // TODO: navigate to next SOS report details screen when the flow is implemented.
+    router.push({
+      pathname: "/sos/details",
+      params: {
+        imageUri,
+        sourceType: nextSourceType,
+      },
+    });
+  };
+
+  const handleRetakePhoto = () => {
+    setPendingImageUri(null);
+    setPendingSourceType(null);
+    setSelectedImageUri(null);
+    setSourceType(null);
+  };
+
+  const handleConfirmSelectedImage = () => {
+    if (!pendingImageUri || !pendingSourceType) {
+      return;
+    }
+
+    handleImageSelected(pendingImageUri, pendingSourceType);
+    showToast("Image confirmed.");
   };
 
   const handleUploadFromGallery = async () => {
@@ -71,7 +100,6 @@ export default function SosReportScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
         mediaTypes: ["images"],
         quality: 1,
       });
@@ -80,8 +108,11 @@ export default function SosReportScreen() {
         return;
       }
 
-      handleImageSelected(result.assets[0].uri, "gallery");
-      showToast("Image selected from gallery.");
+      setPendingImageUri(result.assets[0].uri);
+      setPendingSourceType("gallery");
+      setSelectedImageUri(result.assets[0].uri);
+      setSourceType("gallery");
+      showToast("Image selected. Confirm or retake.");
     } catch {
       showToast("Unable to open image library.", "error");
     } finally {
@@ -126,8 +157,11 @@ export default function SosReportScreen() {
         return;
       }
 
-      handleImageSelected(result.uri, "camera");
-      showToast("Photo captured.");
+      setPendingImageUri(result.uri);
+      setPendingSourceType("camera");
+      setSelectedImageUri(result.uri);
+      setSourceType("camera");
+      showToast("Photo captured. Confirm or retake.");
     } catch {
       showToast("Unable to open camera right now.", "error");
     } finally {
@@ -135,9 +169,16 @@ export default function SosReportScreen() {
     }
   };
 
+  const isSelectionAwaitingConfirmation = Boolean(
+    pendingImageUri && pendingSourceType,
+  );
+
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.loginHeaderGradientStart}
+      />
       <AppToast onDismiss={hideToast} toast={toast} />
 
       <LinearGradient
@@ -207,19 +248,39 @@ export default function SosReportScreen() {
               sourceType={sourceType}
             />
 
-            <View style={styles.uploadButtonWrap}>
-              <SosUploadButton
-                disabled={isSelectingImage}
-                onPress={() => void handleUploadFromGallery()}
-              />
-            </View>
+            {isSelectionAwaitingConfirmation ? (
+              <View style={styles.captureDecisionWrap}>
+                <SosActionButton
+                  disabled={isSelectingImage}
+                  label="Retake"
+                  onPress={handleRetakePhoto}
+                  style={styles.captureDecisionButton}
+                  variant="soft"
+                />
+                <SosActionButton
+                  disabled={isSelectingImage}
+                  label="Confirm"
+                  onPress={handleConfirmSelectedImage}
+                  style={styles.captureDecisionButton}
+                />
+              </View>
+            ) : (
+              <>
+                <View style={styles.uploadButtonWrap}>
+                  <SosUploadButton
+                    disabled={isSelectingImage}
+                    onPress={() => void handleUploadFromGallery()}
+                  />
+                </View>
 
-            <View style={styles.captureButtonWrap}>
-              <SosCaptureButton
-                disabled={isSelectingImage}
-                onPress={() => void handleCapturePhoto()}
-              />
-            </View>
+                <View style={styles.captureButtonWrap}>
+                  <SosCaptureButton
+                    disabled={isSelectingImage}
+                    onPress={() => void handleCapturePhoto()}
+                  />
+                </View>
+              </>
+            )}
           </ScrollView>
         </View>
       </LinearGradient>
@@ -299,6 +360,17 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       alignItems: "center",
       justifyContent: "center",
       width: "100%",
+    },
+    captureDecisionWrap: {
+      width: "100%",
+      marginTop: 18,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      columnGap: 10,
+    },
+    captureDecisionButton: {
+      flex: 1,
     },
     pressed: {
       opacity: 0.84,

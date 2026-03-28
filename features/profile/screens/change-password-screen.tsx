@@ -362,7 +362,10 @@ export default function ChangePasswordScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.loginHeaderGradientEnd}
+      />
       <AppToast onDismiss={hideToast} toast={toast} />
 
       <LinearGradient

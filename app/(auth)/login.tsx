@@ -579,7 +579,10 @@ export default function Login() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.loginHeaderGradientStart}
+      />
       <AppToast onDismiss={hideToast} toast={toast} />
 
       <KeyboardAvoidingView

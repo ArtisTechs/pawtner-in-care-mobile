@@ -124,7 +124,10 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.loginHeaderGradientEnd}
+      />
 
       <LinearGradient
         colors={[

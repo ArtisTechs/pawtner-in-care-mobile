@@ -3,6 +3,7 @@ import { VerifiedBadge } from "@/components/community/verified-badge";
 import { Colors, RoundedFontFamily } from "@/constants/theme";
 import {
   resolveImageSource,
+  resolveOptionalImageSource,
 } from "@/features/community/community.data";
 import type { CommunityPost } from "@/features/community/community.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -26,15 +27,26 @@ export function CommunityPostCard({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const hashtagsText = post.hashtags.join(" ");
   const hasBodyContent = Boolean(post.caption || hashtagsText);
+  const avatarSource = resolveOptionalImageSource(post.userAvatar);
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Image
-          source={resolveImageSource(post.userAvatar)}
-          style={styles.avatar}
-          resizeMode="cover"
-        />
+        {avatarSource ? (
+          <Image
+            source={avatarSource}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.avatarFallback}>
+            <MaterialIcons
+              color={colors.dashboardBottomIcon}
+              name="person"
+              size={24}
+            />
+          </View>
+        )}
 
         <View style={styles.headerMeta}>
           <View style={styles.nameRow}>
@@ -107,6 +119,14 @@ const createStyles = (colors: typeof Colors.light) =>
       height: 42,
       borderRadius: 21,
       backgroundColor: "rgba(44, 110, 184, 0.14)",
+    },
+    avatarFallback: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: "rgba(44, 110, 184, 0.14)",
+      alignItems: "center",
+      justifyContent: "center",
     },
     headerMeta: {
       flex: 1,

@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import {
   Image,
   type ImageSourcePropType,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -11,12 +12,16 @@ import {
 
 type ChatHeaderProps = {
   avatarSource: ImageSourcePropType;
+  backIconSource?: ImageSourcePropType;
+  onPressBack?: () => void;
   titleText: string;
   topInset: number;
 };
 
 export function ChatHeader({
   avatarSource,
+  backIconSource,
+  onPressBack,
   titleText,
   topInset,
 }: ChatHeaderProps) {
@@ -32,9 +37,20 @@ export function ChatHeader({
           paddingTop: topInset + 8,
         },
       ]}
-    >
-      <View style={styles.sideSlot}>
-        <View style={styles.emptySlot} />
+      >
+        <View style={styles.sideSlot}>
+        {onPressBack && backIconSource ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            onPress={onPressBack}
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+          >
+            <Image source={backIconSource} style={styles.backIcon} resizeMode="contain" />
+          </Pressable>
+        ) : (
+          <View style={styles.emptySlot} />
+        )}
       </View>
 
       <View style={styles.titleWrap}>
@@ -72,6 +88,18 @@ const createStyles = (colors: typeof Colors.light) =>
       width: 36,
       height: 36,
     },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 999,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    backIcon: {
+      width: 22,
+      height: 22,
+      tintColor: colors.dashboardHeaderText,
+    },
     titleWrap: {
       flex: 1,
       alignItems: "center",
@@ -103,5 +131,8 @@ const createStyles = (colors: typeof Colors.light) =>
     avatar: {
       width: 42,
       height: 42,
+    },
+    pressed: {
+      opacity: 0.84,
     },
   });
