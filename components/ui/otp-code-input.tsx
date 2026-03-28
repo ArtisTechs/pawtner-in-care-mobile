@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   boxText: {
     fontFamily: RoundedFontFamily,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
   },
   hiddenInput: {

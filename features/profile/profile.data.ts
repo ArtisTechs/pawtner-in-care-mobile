@@ -6,7 +6,6 @@ import type {
 
 export const PROFILE_ASSETS: ProfileAssets = {
   backIcon: require("../../assets/images/back-icon.png"),
-  defaultAvatar: require("../../assets/images/cat.png"),
 };
 
 export const PROFILE_BADGES: ProfileBadgeItem[] = [
@@ -39,5 +38,4 @@ export const PROFILE_BADGES: ProfileBadgeItem[] = [
 export const PROFILE_SETTINGS_ITEMS: ProfileSettingsItem[] = [
   { key: "profile-settings", label: "Profile Settings" },
   { key: "change-password", label: "Change Password" },
-  { key: "notification", label: "Notification" },
 ];

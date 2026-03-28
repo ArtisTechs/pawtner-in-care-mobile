@@ -40,7 +40,7 @@ const createStyles = (colors: typeof Colors.light) =>
     value: {
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextPrimary,
-      fontSize: 17,
+      fontSize: 16,
       lineHeight: 21,
       fontWeight: "900",
     },
@@ -48,7 +48,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 1,
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextSecondary,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "700",
     },

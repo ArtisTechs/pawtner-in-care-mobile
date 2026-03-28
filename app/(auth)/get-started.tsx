@@ -1,8 +1,9 @@
+import { FullScreenLoader } from "@/components/ui/full-screen-loader";
+import { GlowingCircle } from "@/components/ui/glowing-circle";
 import { Colors, RoundedFontFamily } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { authStorage } from "@/services/auth/auth.storage";
-import { FullScreenLoader } from "@/components/ui/full-screen-loader";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -98,24 +99,36 @@ export default function GetStarted() {
           colors.loginHeaderGradientStart,
           colors.loginHeaderGradientEnd,
         ]}
-        style={[styles.heroPanel, { height: heroHeight, paddingTop: insets.top + 8 }]}
+        style={[
+          styles.heroPanel,
+          { height: heroHeight, paddingTop: insets.top + 8 },
+        ]}
       >
-        <Image
-          source={require("../../assets/images/pet-hugging.png")}
-          style={styles.heroImage}
-          resizeMode="contain"
-        />
+        <View style={styles.heroImageWrap}>
+          <GlowingCircle
+            size={140}
+            glowRadius={50}
+            style={styles.heroImageGlow}
+          />
+          <Image
+            source={require("../../assets/images/pet-hugging-2.png")}
+            style={styles.heroImage}
+            resizeMode="contain"
+          />
+        </View>
       </LinearGradient>
 
       <View style={styles.content}>
         <Text style={styles.welcome}>
-          {isFirstLoginVariant ? "Find Your Paw" : "Welcome Back!"}
+          {isFirstLoginVariant ? "Find Your Paw" : "Welcome Back! 👋"}
         </Text>
         <Text style={styles.name}>
           {isFirstLoginVariant ? "FRIEND WITH US" : displayName}
         </Text>
         <Text style={styles.subtitle}>
-          {"Let's start your journey with your beloved pets and enjoy life better"}
+          {
+            "Let's start your journey with your beloved pets and enjoy life better"
+          }
         </Text>
 
         <Pressable
@@ -150,6 +163,16 @@ const createStyles = (colors: typeof Colors.light) =>
       width: "100%",
       height: "96%",
     },
+    heroImageWrap: {
+      width: "100%",
+      height: "96%",
+      alignItems: "center",
+      justifyContent: "flex-end",
+    },
+    heroImageGlow: {
+      position: "absolute",
+      bottom: 10,
+    },
     content: {
       alignItems: "center",
       paddingHorizontal: 24,
@@ -161,17 +184,16 @@ const createStyles = (colors: typeof Colors.light) =>
     welcome: {
       fontFamily: RoundedFontFamily,
       color: colors.loginTabText,
-      fontSize: 24,
+      fontSize: 20,
       fontWeight: "800",
       textAlign: "center",
       lineHeight: 30,
     },
     name: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: "Frankfurter-Regular",
       marginTop: 4,
       color: colors.loginHeaderGradientStart,
-      fontSize: 36,
-      fontWeight: "900",
+      fontSize: 32,
       letterSpacing: 0.6,
       textAlign: "center",
       lineHeight: 40,
@@ -179,7 +201,7 @@ const createStyles = (colors: typeof Colors.light) =>
     subtitle: {
       fontFamily: RoundedFontFamily,
       marginTop: 18,
-      color: colors.loginUtilityText,
+      color: colors.loginTabText,
       textAlign: "center",
       fontSize: 14,
       lineHeight: 21,
@@ -201,7 +223,7 @@ const createStyles = (colors: typeof Colors.light) =>
     buttonText: {
       fontFamily: RoundedFontFamily,
       color: colors.loginTabActiveText,
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: "800",
       lineHeight: 22,
     },

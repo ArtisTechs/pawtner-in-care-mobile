@@ -78,7 +78,7 @@ const createStyles = (colors: typeof Colors.light) =>
       textAlign: "center",
       fontFamily: RoundedFontFamily,
       color: "#5E90CC",
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "700",
     },

@@ -172,7 +172,7 @@ export default function EventsScreen() {
   const emptyStateMessage =
     activeTab === "events"
       ? "No events scheduled for this date."
-      : "No local events available.";
+      : "No event listings available.";
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -404,7 +404,7 @@ export default function EventsScreen() {
 
       <FilterBottomModal
         visible={isLocalFilterModalVisible}
-        title="Local Events Filter"
+        title="Event List Filter"
         resetLabel="Reset"
         confirmLabel="Apply"
         sections={localFilterSections}
@@ -467,7 +467,7 @@ const createStyles = (
     headerTitle: {
       ...roundedText,
       color: colors.dashboardHeaderText,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 22,
       fontWeight: "900",
       letterSpacing: 0.8,

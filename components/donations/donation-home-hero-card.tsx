@@ -1,5 +1,5 @@
 import { DonationProgressBar } from "@/components/donations/donation-progress-bar";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import { DONATION_ASSETS } from "@/features/donations/donations.data";
 import type { DonationCauseItem } from "@/features/donations/donations.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -131,7 +131,7 @@ const createStyles = (colors: typeof Colors.light) =>
     categoryChipText: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 11,
+      fontSize: 8,
       lineHeight: 13,
       fontWeight: "800",
     },
@@ -141,7 +141,7 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingBottom: 16,
     },
     title: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: DisplayFontFamily,
       color: colors.dashboardBottomIconActive,
       fontSize: 16,
       lineHeight: 20,
@@ -162,7 +162,7 @@ const createStyles = (colors: typeof Colors.light) =>
     amount: {
       marginTop: 8,
       fontFamily: RoundedFontFamily,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "900",
     },

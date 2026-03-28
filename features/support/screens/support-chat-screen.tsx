@@ -10,7 +10,6 @@ import type {
 } from "@/features/support/support.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
@@ -58,7 +57,6 @@ const buildBotReply = (userMessage: string) => {
 };
 
 export default function SupportChatScreen() {
-  const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const insets = useSafeAreaInsets();
@@ -91,15 +89,6 @@ export default function SupportChatScreen() {
   useEffect(() => {
     scrollToLatest(true);
   }, [messages.length, scrollToLatest]);
-
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.replace("/(tabs)");
-  };
 
   const handleSendMessage = () => {
     const trimmedMessage = draftMessage.trim();
@@ -149,9 +138,7 @@ export default function SupportChatScreen() {
           <View style={styles.contentWrap}>
             <ChatHeader
               avatarSource={SUPPORT_ASSETS.dogBotIcon}
-              backIconSource={SUPPORT_ASSETS.backIcon}
-              onPressBack={handleBack}
-              titleSource={SUPPORT_ASSETS.dogBotTitle}
+              titleText="DOG BOT"
               topInset={insets.top}
             />
 

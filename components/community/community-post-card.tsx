@@ -118,7 +118,7 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     userName: {
       fontFamily: RoundedFontFamily,
-      fontSize: 17,
+      fontSize: 16,
       lineHeight: 20,
       fontWeight: "900",
       color: colors.dashboardBottomIconActive,
@@ -126,7 +126,7 @@ const createStyles = (colors: typeof Colors.light) =>
     timeLabel: {
       marginTop: 2,
       fontFamily: RoundedFontFamily,
-      fontSize: 11,
+      fontSize: 8,
       lineHeight: 14,
       fontWeight: "700",
       color: colors.dashboardBottomIcon,
@@ -148,7 +148,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 4,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "900",
     },

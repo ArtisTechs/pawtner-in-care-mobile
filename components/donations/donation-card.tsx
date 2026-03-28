@@ -1,5 +1,5 @@
 import { DonationProgressBar } from "@/components/donations/donation-progress-bar";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import { DONATION_ASSETS } from "@/features/donations/donations.data";
 import type { DonationCauseItem } from "@/features/donations/donations.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -129,9 +129,9 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingRight: 4,
     },
     title: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: DisplayFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 21,
       fontWeight: "900",
       letterSpacing: 0.2,
@@ -148,7 +148,7 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     amount: {
       fontFamily: RoundedFontFamily,
-      fontSize: 11,
+      fontSize: 8,
       lineHeight: 14,
       fontWeight: "800",
       flex: 1,

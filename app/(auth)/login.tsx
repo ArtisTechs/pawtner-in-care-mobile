@@ -60,6 +60,9 @@ const OTP_LENGTH = 6;
 const DEFAULT_RESEND_COOLDOWN_SECONDS = 60;
 const TITLE_REVEAL_DURATION_MS = 220;
 const TITLE_HOLD_DURATION_MS = 520;
+const LOGIN_TITLE_WIDTH_RATIO = 0.55;
+const LOGIN_HEADER_MIN_HEIGHT = 150;
+const LOGIN_HEADER_HEIGHT_OFFSET = 36;
 
 const extractResendCooldownSeconds = (
   response: SendOtpResponse | null,
@@ -144,7 +147,7 @@ export default function Login() {
   const isPlainLoginStep = !isSignUp && forgotPasswordStep === "idle";
   const isOtpFlow = isSignUpOtpStep || isForgotPasswordOtpStep;
   const isForgotPasswordFlow = !isSignUp && forgotPasswordStep !== "idle";
-  const titleWidth = Math.min(width, 420) * 0.7;
+  const titleWidth = Math.min(width, 420) * LOGIN_TITLE_WIDTH_RATIO;
   const titleHeight = titleWidth * 0.9;
 
   useEffect(() => {
@@ -307,6 +310,25 @@ export default function Login() {
     showToast(response?.message?.trim() || fallbackSuccessMessage);
   };
 
+  const requestOtpWithFullScreenLoader = async (
+    purpose: Extract<OtpPurpose, "signup" | "reset-password">,
+    fallbackSuccessMessage: string,
+    subtitle: string,
+  ) => {
+    setLoadingSubtitle(subtitle);
+    setIsSubmitting(true);
+
+    try {
+      await requestOtp(purpose, fallbackSuccessMessage);
+      return true;
+    } catch (error) {
+      setApiError(getErrorMessage(error, ERROR_MESSAGES.authFallback));
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSignUpOtpRequest = async () => {
     const nextErrors = validateAuthForm("signup", form);
     setErrors(nextErrors);
@@ -316,17 +338,15 @@ export default function Login() {
       return;
     }
 
-    setLoadingSubtitle("Sending OTP for your sign up...");
-    setIsSubmitting(true);
+    const otpSent = await requestOtpWithFullScreenLoader(
+      "signup",
+      "OTP sent to your email.",
+      "Sending OTP for your sign up...",
+    );
 
-    try {
-      await requestOtp("signup", "OTP sent to your email.");
+    if (otpSent) {
       setSignUpStep("otp");
       setOtpCode("");
-    } catch (error) {
-      setApiError(getErrorMessage(error, ERROR_MESSAGES.authFallback));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -382,21 +402,16 @@ export default function Login() {
       return;
     }
 
-    setLoadingSubtitle("Sending password reset OTP...");
-    setIsSubmitting(true);
+    const otpSent = await requestOtpWithFullScreenLoader(
+      "reset-password",
+      "Password reset OTP sent. Enter it to continue.",
+      "Sending password reset OTP...",
+    );
 
-    try {
-      await requestOtp(
-        "reset-password",
-        "Password reset OTP sent. Enter it to continue.",
-      );
+    if (otpSent) {
       setForgotPasswordStep("otp");
       setOtpCode("");
       clearPasswordFields();
-    } catch (error) {
-      setApiError(getErrorMessage(error, ERROR_MESSAGES.authFallback));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -514,19 +529,11 @@ export default function Login() {
     }
 
     clearTransientErrors();
-    setLoadingSubtitle("Resending OTP...");
-    setIsSubmitting(true);
-
-    try {
-      await requestOtp(
-        isSignUp ? "signup" : "reset-password",
-        "OTP sent again.",
-      );
-    } catch (error) {
-      setApiError(getErrorMessage(error, ERROR_MESSAGES.authFallback));
-    } finally {
-      setIsSubmitting(false);
-    }
+    await requestOtpWithFullScreenLoader(
+      isSignUp ? "signup" : "reset-password",
+      "OTP sent again.",
+      "Resending OTP...",
+    );
   };
 
   const handleSecondaryAction = () => {
@@ -592,7 +599,12 @@ export default function Login() {
           ]}
           style={[
             styles.topHeader,
-            { height: Math.max(245, titleHeight + 44) },
+            {
+              height: Math.max(
+                LOGIN_HEADER_MIN_HEIGHT,
+                titleHeight + LOGIN_HEADER_HEIGHT_OFFSET,
+              ),
+            },
           ]}
         />
 
@@ -1088,7 +1100,7 @@ export default function Login() {
       </KeyboardAvoidingView>
       <FullScreenLoader
         absolute
-        backgroundColor={colors.loginCardBackground}
+        backgroundColor="rgba(0, 0, 0, 0.28)"
         subtitle={loadingSubtitle}
         visible={isSubmitting}
       />
@@ -1121,7 +1133,7 @@ const createStyles = (colors: typeof Colors.light) => {
       backgroundColor: colors.loginCardBackground,
     },
     topHeader: {
-      height: 245,
+      height: LOGIN_HEADER_MIN_HEIGHT,
       borderBottomRightRadius: 48,
       justifyContent: "center",
       alignItems: "center",
@@ -1175,7 +1187,7 @@ const createStyles = (colors: typeof Colors.light) => {
       ...roundedText,
       width: "76%",
       color: colors.loginInputText,
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: "700",
       marginBottom: 8,
     },
@@ -1183,7 +1195,7 @@ const createStyles = (colors: typeof Colors.light) => {
       ...roundedText,
       width: "76%",
       color: colors.loginHintText,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 19,
       marginBottom: 14,
     },
@@ -1198,7 +1210,7 @@ const createStyles = (colors: typeof Colors.light) => {
       marginBottom: 12,
       color: colors.loginInputText,
       backgroundColor: colors.loginInputBackground,
-      fontSize: 15,
+      fontSize: 14,
     },
     passwordInputWrapper: {
       width: "76%",
@@ -1218,7 +1230,7 @@ const createStyles = (colors: typeof Colors.light) => {
       flex: 1,
       height: "100%",
       color: colors.loginInputText,
-      fontSize: 15,
+      fontSize: 14,
       paddingRight: 8,
     },
     passwordIconButton: {
@@ -1233,7 +1245,7 @@ const createStyles = (colors: typeof Colors.light) => {
       ...roundedText,
       width: "76%",
       color: colors.loginError,
-      fontSize: 12,
+      fontSize: 14,
       marginTop: -6,
       marginBottom: 8,
       paddingLeft: 4,
@@ -1242,7 +1254,7 @@ const createStyles = (colors: typeof Colors.light) => {
       ...roundedText,
       width: "82%",
       color: colors.loginError,
-      fontSize: 12,
+      fontSize: 14,
       textAlign: "center",
       marginTop: -4,
       marginBottom: 10,
@@ -1256,7 +1268,7 @@ const createStyles = (colors: typeof Colors.light) => {
     forgotText: {
       ...roundedText,
       color: colors.loginCheckboxFill,
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: "600",
     },
     accountHintRow: {
@@ -1265,7 +1277,7 @@ const createStyles = (colors: typeof Colors.light) => {
     accountHintText: {
       ...roundedText,
       color: colors.loginHintText,
-      fontSize: 12,
+      fontSize: 14,
     },
     accountHintLink: {
       ...roundedText,
@@ -1299,7 +1311,7 @@ const createStyles = (colors: typeof Colors.light) => {
     linkText: {
       ...roundedText,
       color: colors.loginCheckboxFill,
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: "600",
       textDecorationLine: "underline",
     },

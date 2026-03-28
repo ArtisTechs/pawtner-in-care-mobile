@@ -1,6 +1,6 @@
 import { DonationHomeHeroCard } from "@/components/donations/donation-home-hero-card";
 import { DonationHomeMiniCard } from "@/components/donations/donation-home-mini-card";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   DONATION_ASSETS,
   getDonationCauses,
@@ -257,8 +257,9 @@ const createStyles = (
     },
     title: {
       ...roundedText,
+      fontFamily: DisplayFontFamily,
       color: colors.loginHeaderGradientStart,
-      fontSize: 36,
+      fontSize: 32,
       lineHeight: 34,
       fontWeight: "900",
       textAlign: "center",
@@ -267,7 +268,7 @@ const createStyles = (
       ...roundedText,
       marginTop: 2,
       color: colors.loginTabText,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "700",
       textAlign: "center",
@@ -317,7 +318,7 @@ const createStyles = (
     seeAllText: {
       ...roundedText,
       color: colors.dashboardSubtleText,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "700",
     },

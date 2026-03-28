@@ -402,7 +402,7 @@ const createStyles = (
     sectionCount: {
       ...roundedText,
       color: colors.dashboardSubtleText,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "700",
     },

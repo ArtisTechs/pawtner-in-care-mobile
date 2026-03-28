@@ -82,7 +82,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 1,
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextSecondary,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "600",
     },

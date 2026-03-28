@@ -1,5 +1,5 @@
-import type { ImageSourcePropType } from "react-native";
 import type { PetType } from "@/features/pets/pets.types";
+import type { ImageSourcePropType } from "react-native";
 
 export type DashboardPromoItem = {
   id: string;
@@ -31,14 +31,13 @@ export type DashboardBottomNavKey =
   | "profile";
 
 export const DASHBOARD_ASSETS = {
-  TitleLogo2: require("../../assets/images/title-logo-2.png"),
+  TitleLogo2: require("../../assets/images/title-logo.png"),
   communityBanner: require("../../assets/images/carousel/community-banner.png"),
   donateBanner: require("../../assets/images/carousel/donate-banner.png"),
   petHugging: require("../../assets/images/pet-hugging.png"),
   dogDefault: require("../../assets/images/dog.png"),
   catDefault: require("../../assets/images/cat.png"),
   categoryVeterinary: require("../../assets/images/veterinary-icon.png"),
-  categoryTracker: require("../../assets/images/tracker-icon.png"),
   navChat: require("../../assets/images/chat-icon.png"),
   categoryAdoptPets: require("../../assets/images/adopt-pets-icon.png"),
   categoryEvents: require("../../assets/images/events-icon.png"),
@@ -64,11 +63,6 @@ export const DASHBOARD_CATEGORIES: DashboardCategoryItem[] = [
     id: "veterinary",
     iconSource: DASHBOARD_ASSETS.categoryVeterinary,
     label: "Veterinary",
-  },
-  {
-    id: "tracker",
-    iconSource: DASHBOARD_ASSETS.categoryTracker,
-    label: "Tracker",
   },
   {
     id: "adopt-pets",

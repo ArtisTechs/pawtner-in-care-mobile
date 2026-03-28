@@ -13,7 +13,6 @@ export const PET_ASSETS = {
   backIcon: require("../../assets/images/back-icon.png"),
   dogDefault: require("../../assets/images/dog.png"),
   catDefault: require("../../assets/images/cat.png"),
-  listingTitle: require("../../assets/images/pet-listing-title.png"),
 } as const;
 
 export const PET_FILTER_OPTIONS: PetFilterOption[] = [

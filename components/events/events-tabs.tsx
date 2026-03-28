@@ -12,8 +12,8 @@ type EventsTabsProps = {
 };
 
 const TABS: { key: EventsTabKey; label: string }[] = [
-  { key: "events", label: "Events" },
-  { key: "local", label: "Local Events" },
+  { key: "events", label: "Calendar" },
+  { key: "local", label: "List" },
 ];
 
 export function EventsTabs({

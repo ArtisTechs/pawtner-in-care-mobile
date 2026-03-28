@@ -48,7 +48,7 @@ const createStyles = (colors: typeof Colors.light) =>
     label: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 19,
       fontWeight: "700",
     },

@@ -1,4 +1,4 @@
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import React, { useMemo } from "react";
 import {
@@ -175,8 +175,8 @@ const createStyles = (colors: typeof Colors.light) =>
     title: {
       marginTop: 8,
       textAlign: "center",
-      fontFamily: RoundedFontFamily,
-      fontSize: 28,
+      fontFamily: DisplayFontFamily,
+      fontSize: 32,
       lineHeight: 32,
       fontWeight: "900",
       color: colors.dashboardBottomIconActive,
@@ -197,7 +197,7 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     sectionTitle: {
       fontFamily: RoundedFontFamily,
-      fontSize: 24,
+      fontSize: 20,
       lineHeight: 28,
       fontWeight: "900",
       color: colors.dashboardBottomIconActive,
@@ -227,7 +227,7 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     chipLabel: {
       fontFamily: RoundedFontFamily,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "700",
       color: colors.dashboardBottomIcon,
@@ -259,14 +259,14 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     secondaryButtonLabel: {
       fontFamily: RoundedFontFamily,
-      fontSize: 22,
+      fontSize: 20,
       lineHeight: 25,
       fontWeight: "800",
       color: colors.dashboardSectionCardBackground,
     },
     primaryButtonLabel: {
       fontFamily: RoundedFontFamily,
-      fontSize: 22,
+      fontSize: 20,
       lineHeight: 25,
       fontWeight: "800",
       color: colors.dashboardSectionCardBackground,

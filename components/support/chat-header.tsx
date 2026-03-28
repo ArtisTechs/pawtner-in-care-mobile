@@ -1,10 +1,9 @@
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import React, { useMemo } from "react";
 import {
   Image,
   type ImageSourcePropType,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -12,17 +11,13 @@ import {
 
 type ChatHeaderProps = {
   avatarSource: ImageSourcePropType;
-  backIconSource: ImageSourcePropType;
-  onPressBack: () => void;
-  titleSource: ImageSourcePropType;
+  titleText: string;
   topInset: number;
 };
 
 export function ChatHeader({
   avatarSource,
-  backIconSource,
-  onPressBack,
-  titleSource,
+  titleText,
   topInset,
 }: ChatHeaderProps) {
   const colorScheme = useColorScheme() ?? "light";
@@ -39,21 +34,11 @@ export function ChatHeader({
       ]}
     >
       <View style={styles.sideSlot}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onPressBack}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <Image
-            source={backIconSource}
-            style={styles.backIcon}
-            resizeMode="contain"
-          />
-        </Pressable>
+        <View style={styles.emptySlot} />
       </View>
 
       <View style={styles.titleWrap}>
-        <Image source={titleSource} style={styles.titleImage} resizeMode="contain" />
+        <Text style={styles.titleText}>{titleText}</Text>
         <Text style={styles.status}>
           <Text style={styles.statusDot}>{"\u2022 "}</Text>
           Online
@@ -83,26 +68,22 @@ const createStyles = (colors: typeof Colors.light) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    backButton: {
+    emptySlot: {
       width: 36,
       height: 36,
-      borderRadius: 18,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    backIcon: {
-      width: 24,
-      height: 24,
-      tintColor: colors.dashboardHeaderText,
     },
     titleWrap: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
     },
-    titleImage: {
-      width: 128,
-      height: 28,
+    titleText: {
+      fontFamily: DisplayFontFamily,
+      color: colors.dashboardHeaderText,
+      fontSize: 32,
+      lineHeight: 34,
+      letterSpacing: 0.4,
+      textAlign: "center",
     },
     status: {
       marginTop: 2,
@@ -115,15 +96,12 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     statusDot: {
       color: "#A9F28E",
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 20,
       fontWeight: "900",
     },
     avatar: {
       width: 42,
       height: 42,
-    },
-    pressed: {
-      opacity: 0.84,
     },
   });

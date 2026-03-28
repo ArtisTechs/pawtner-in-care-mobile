@@ -1,4 +1,4 @@
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import { DONATION_ASSETS } from "@/features/donations/donations.data";
 import type { DonationCauseItem } from "@/features/donations/donations.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -79,9 +79,9 @@ const createStyles = (colors: typeof Colors.light) =>
       height: "100%",
     },
     title: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: DisplayFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "900",
       textAlign: "center",

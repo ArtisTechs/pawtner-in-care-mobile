@@ -231,7 +231,7 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingVertical: 10,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "700",
       textAlignVertical: "top",
@@ -280,7 +280,7 @@ const createStyles = (colors: typeof Colors.light) =>
     videoPreviewText: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "700",
     },

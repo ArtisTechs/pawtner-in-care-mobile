@@ -10,8 +10,7 @@ export type ProfileBadgeItem = {
 
 export type ProfileSettingsKey =
   | "profile-settings"
-  | "change-password"
-  | "notification";
+  | "change-password";
 
 export type ProfileSettingsItem = {
   key: ProfileSettingsKey;
@@ -20,5 +19,4 @@ export type ProfileSettingsItem = {
 
 export type ProfileAssets = {
   backIcon: ImageSourcePropType;
-  defaultAvatar: ImageSourcePropType;
 };

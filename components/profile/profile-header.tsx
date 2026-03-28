@@ -1,5 +1,6 @@
 import { Colors, RoundedFontFamily } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React, { useMemo } from "react";
 import {
   Image,
@@ -10,7 +11,7 @@ import {
 } from "react-native";
 
 type ProfileHeaderProps = {
-  avatarSource: ImageSourcePropType;
+  avatarSource: ImageSourcePropType | null;
   email: string;
   fullName: string;
 };
@@ -27,7 +28,17 @@ export function ProfileHeader({
   return (
     <View style={styles.container}>
       <View style={styles.avatarWrap}>
-        <Image source={avatarSource} style={styles.avatar} resizeMode="cover" />
+        {avatarSource ? (
+          <Image source={avatarSource} style={styles.avatar} resizeMode="cover" />
+        ) : (
+          <View style={styles.avatarFallback}>
+            <MaterialIcons
+              color={colors.dashboardBottomIcon}
+              name="person"
+              size={60}
+            />
+          </View>
+        )}
       </View>
 
       <Text numberOfLines={1} style={styles.name}>
@@ -54,7 +65,7 @@ const createStyles = (colors: typeof Colors.light) =>
       borderWidth: 3,
       borderColor: colors.white,
       overflow: "hidden",
-      backgroundColor: "rgba(255, 255, 255, 0.35)",
+      backgroundColor: colors.white,
       shadowColor: colors.dashboardShadow,
       shadowOffset: { width: 0, height: 5 },
       shadowOpacity: 0.2,
@@ -65,11 +76,17 @@ const createStyles = (colors: typeof Colors.light) =>
       width: "100%",
       height: "100%",
     },
+    avatarFallback: {
+      width: "100%",
+      height: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+    },
     name: {
       marginTop: 12,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 22,
+      fontSize: 20,
       lineHeight: 27,
       fontWeight: "900",
       textAlign: "center",
@@ -78,7 +95,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 2,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardSubtleText,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "600",
       textAlign: "center",

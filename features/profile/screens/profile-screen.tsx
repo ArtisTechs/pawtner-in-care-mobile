@@ -4,7 +4,6 @@ import { SettingsItem } from "@/components/profile/settings-item";
 import { DashboardBottomNavbar } from "@/components/navigation/dashboard-bottom-navbar";
 import { Colors, RoundedFontFamily } from "@/constants/theme";
 import {
-  PROFILE_ASSETS,
   PROFILE_BADGES,
   PROFILE_SETTINGS_ITEMS,
 } from "@/features/profile/profile.data";
@@ -16,7 +15,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  Image,
   type ImageSourcePropType,
   Pressable,
   ScrollView,
@@ -43,9 +41,9 @@ const resolveNonEmptyText = (value: unknown) => {
 
 const resolveAvatarSource = (
   user: Record<string, unknown> | null | undefined,
-): ImageSourcePropType => {
+): ImageSourcePropType | null => {
   if (!user) {
-    return PROFILE_ASSETS.defaultAvatar;
+    return null;
   }
 
   const avatarUriCandidates = [
@@ -64,7 +62,7 @@ const resolveAvatarSource = (
     }
   }
 
-  return PROFILE_ASSETS.defaultAvatar;
+  return null;
 };
 
 export default function ProfileScreen() {
@@ -96,15 +94,6 @@ export default function ProfileScreen() {
   );
   const avatarSource = useMemo(() => resolveAvatarSource(userRecord), [userRecord]);
 
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.replace("/(tabs)");
-  };
-
   const handleSignOut = async () => {
     if (isSigningOut) {
       return;
@@ -130,12 +119,7 @@ export default function ProfileScreen() {
       return;
     }
 
-    if (settingKey === "change-password") {
-      // TODO: route to change-password screen once implemented.
-      return;
-    }
-
-    // TODO: route to notification preferences screen once implemented.
+    router.push("/change-password");
   };
 
   return (
@@ -161,18 +145,6 @@ export default function ProfileScreen() {
           ]}
         >
           <View style={styles.actionsRow}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleBack}
-              style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-            >
-              <Image
-                source={PROFILE_ASSETS.backIcon}
-                style={styles.backIcon}
-                resizeMode="contain"
-              />
-            </Pressable>
-
             <Pressable
               accessibilityRole="button"
               disabled={isSigningOut}
@@ -247,19 +219,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       paddingHorizontal: 18,
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-    },
-    backButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    backIcon: {
-      width: 24,
-      height: 24,
-      tintColor: colors.white,
+      justifyContent: "flex-end",
     },
     logoutButton: {
       minHeight: 32,
@@ -282,7 +242,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
     logoutText: {
       fontFamily: RoundedFontFamily,
       color: colors.white,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "800",
     },
@@ -306,7 +266,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       paddingHorizontal: 2,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 17,
       fontWeight: "900",
       letterSpacing: 0.7,

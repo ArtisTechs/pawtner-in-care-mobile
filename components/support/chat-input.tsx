@@ -85,7 +85,7 @@ const createStyles = (colors: typeof Colors.light) =>
     input: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 22,
       fontWeight: "700",
       paddingVertical: 8,

@@ -35,13 +35,7 @@ export function PaymentMethodSelect({
     selectedMethod?.accountNumber || selectedMethod?.referenceLabel || "**********";
 
   return (
-    <View
-      style={[
-        styles.wrapper,
-        isDropdownOpen && styles.wrapperOpen,
-        style,
-      ]}
-    >
+    <View style={[styles.wrapper, style]}>
       <View style={styles.fieldRow}>
         <View style={styles.dropdownWrap}>
           <Pressable
@@ -98,10 +92,7 @@ export function PaymentMethodSelect({
 const createStyles = (colors: typeof Colors.light) =>
   StyleSheet.create({
     wrapper: {
-      zIndex: 2,
-    },
-    wrapperOpen: {
-      zIndex: 8,
+      width: "100%",
     },
     fieldRow: {
       flexDirection: "row",
@@ -110,7 +101,6 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     dropdownWrap: {
       flex: 0.92,
-      position: "relative",
     },
     dropdownButton: {
       minHeight: 30,
@@ -129,17 +119,14 @@ const createStyles = (colors: typeof Colors.light) =>
     dropdownLabel: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 10,
+      fontSize: 8,
       lineHeight: 12,
       fontWeight: "700",
       flex: 1,
       marginRight: 6,
     },
     dropdownMenu: {
-      position: "absolute",
-      top: 34,
-      left: 0,
-      right: 0,
+      marginTop: 4,
       borderRadius: 8,
       overflow: "hidden",
       borderWidth: 1,
@@ -164,7 +151,7 @@ const createStyles = (colors: typeof Colors.light) =>
     dropdownOptionText: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 10,
+      fontSize: 8,
       lineHeight: 12,
       fontWeight: "700",
     },
@@ -179,7 +166,7 @@ const createStyles = (colors: typeof Colors.light) =>
     referenceLabel: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardSectionCardBackground,
-      fontSize: 10,
+      fontSize: 8,
       lineHeight: 12,
       fontWeight: "700",
       letterSpacing: 1.1,

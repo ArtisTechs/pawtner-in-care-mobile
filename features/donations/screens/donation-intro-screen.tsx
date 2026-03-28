@@ -204,7 +204,7 @@ const createStyles = (
     headline: {
       ...roundedText,
       color: colors.loginHeaderGradientStart,
-      fontSize: 21,
+      fontSize: 20,
       lineHeight: 23,
       fontWeight: "900",
       textAlign: "center",
@@ -238,7 +238,7 @@ const createStyles = (
     buttonText: {
       ...roundedText,
       color: colors.loginTabActiveText,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 20,
       fontWeight: "900",
     },

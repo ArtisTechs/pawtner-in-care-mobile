@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     fontFamily: RoundedFontFamily,
     marginTop: 8,
     textAlign: "center",
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 18,
     fontWeight: "700",
   },

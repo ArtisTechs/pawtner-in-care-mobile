@@ -115,7 +115,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 3,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 9,
+      fontSize: 8,
       lineHeight: 11,
       fontWeight: "700",
       letterSpacing: 0.5,

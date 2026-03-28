@@ -211,7 +211,7 @@ const createStyles = (colors: typeof Colors.light) =>
     services: {
       marginTop: 6,
       fontFamily: RoundedFontFamily,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "700",
       color: colors.dashboardBottomIconActive,
@@ -219,7 +219,7 @@ const createStyles = (colors: typeof Colors.light) =>
     typeLabel: {
       marginTop: 2,
       fontFamily: RoundedFontFamily,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "700",
       color: colors.dashboardBottomIcon,
@@ -233,7 +233,7 @@ const createStyles = (colors: typeof Colors.light) =>
     ratingText: {
       flex: 1,
       fontFamily: RoundedFontFamily,
-      fontSize: 11,
+      fontSize: 8,
       lineHeight: 14,
       fontWeight: "600",
       color: colors.dashboardBottomIconActive,
@@ -248,7 +248,7 @@ const createStyles = (colors: typeof Colors.light) =>
     address: {
       flex: 1,
       fontFamily: RoundedFontFamily,
-      fontSize: 11,
+      fontSize: 8,
       lineHeight: 14,
       fontWeight: "600",
       color: colors.dashboardBottomIcon,

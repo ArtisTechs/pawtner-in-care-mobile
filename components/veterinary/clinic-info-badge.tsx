@@ -92,14 +92,14 @@ const createStyles = (colors: typeof Colors.light) =>
       textAlign: "center",
     },
     valueCompact: {
-      fontSize: 17,
+      fontSize: 16,
       lineHeight: 21,
     },
     label: {
       marginTop: 2,
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextPrimary,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "700",
       textAlign: "center",

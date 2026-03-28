@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import type { DonationPaymentMethod } from "@/features/donations/donations.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -131,9 +131,9 @@ const createStyles = (colors: typeof Colors.light) =>
       position: "relative",
     },
     title: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: DisplayFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 27,
+      fontSize: 32,
       lineHeight: 30,
       fontWeight: "900",
       textAlign: "center",
@@ -150,7 +150,7 @@ const createStyles = (colors: typeof Colors.light) =>
     closeText: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 20,
       fontWeight: "900",
     },
@@ -165,7 +165,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 10,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 22,
+      fontSize: 20,
       lineHeight: 24,
       fontWeight: "900",
       textAlign: "center",
@@ -175,7 +175,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 2,
       fontFamily: RoundedFontFamily,
       color: "#1E6FBD",
-      fontSize: 24,
+      fontSize: 20,
       lineHeight: 26,
       fontWeight: "900",
       textAlign: "center",
@@ -211,14 +211,14 @@ const createStyles = (colors: typeof Colors.light) =>
     secondaryButtonText: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "800",
     },
     primaryButtonText: {
       fontFamily: RoundedFontFamily,
       color: colors.white,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "800",
     },

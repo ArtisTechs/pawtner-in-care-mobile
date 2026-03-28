@@ -2,7 +2,7 @@ import { PaymentMethodSelect } from "@/components/donations/payment-method-selec
 import { PaymentQrModal } from "@/components/donations/payment-qr-modal";
 import { ProofUploadCard } from "@/components/donations/proof-upload-card";
 import { AppToast } from "@/components/ui/app-toast";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   DONATION_ASSETS,
   getDonationCauseById,
@@ -22,6 +22,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StatusBar,
@@ -198,7 +200,7 @@ export default function DonationPaymentScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
+        allowsEditing: false,
         mediaTypes: ["images"],
         quality: 1,
       });
@@ -253,7 +255,11 @@ export default function DonationPaymentScreen() {
         onSaveQr={handleSaveQr}
       />
 
-      <View style={styles.contentWrap}>
+      <KeyboardAvoidingView
+        style={styles.contentWrap}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={insets.top}
+      >
         <View
           style={[
             styles.headerWrap,
@@ -290,12 +296,17 @@ export default function DonationPaymentScreen() {
 
         <ScrollView
           style={styles.body}
+          automaticallyAdjustKeyboardInsets
+          contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={[
             styles.bodyContent,
             {
               paddingBottom: insets.bottom + 20,
             },
           ]}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="always"
+          nestedScrollEnabled
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.sectionCard}>
@@ -375,7 +386,7 @@ export default function DonationPaymentScreen() {
             <Text style={styles.submitButtonText}>Donate</Text>
           </Pressable>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -426,8 +437,9 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
     },
     title: {
       ...roundedText,
+      fontFamily: DisplayFontFamily,
       color: colors.loginHeaderGradientStart,
-      fontSize: 36,
+      fontSize: 32,
       lineHeight: 34,
       fontWeight: "900",
       textAlign: "center",
@@ -436,7 +448,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       ...roundedText,
       marginTop: 2,
       color: colors.loginTabText,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "700",
       textAlign: "center",
@@ -445,6 +457,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       flex: 1,
     },
     bodyContent: {
+      flexGrow: 1,
       paddingTop: 18,
       paddingHorizontal: 20,
     },
@@ -453,8 +466,9 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
     },
     sectionTitle: {
       ...roundedText,
+      fontFamily: DisplayFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 33,
+      fontSize: 32,
       lineHeight: 36,
       fontWeight: "900",
     },
@@ -473,7 +487,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       ...roundedText,
       marginTop: 14,
       color: colors.dashboardHeaderText,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "700",
     },
@@ -489,7 +503,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
     amountPrefix: {
       ...roundedText,
       color: colors.dashboardBottomIconActive,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "900",
       marginRight: 4,
@@ -498,7 +512,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       ...roundedText,
       flex: 1,
       color: colors.dashboardBottomIconActive,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "900",
       paddingVertical: 8,
@@ -514,7 +528,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
     sectionHeader: {
       ...roundedText,
       color: colors.dashboardHeaderText,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 29,
       fontWeight: "900",
       marginBottom: 8,
@@ -531,7 +545,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       borderRadius: 8,
       backgroundColor: colors.dashboardSectionCardBackground,
       color: colors.dashboardBottomIconActive,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "600",
       paddingHorizontal: 10,
@@ -558,7 +572,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
     submitButtonText: {
       ...roundedText,
       color: "#3D73AC",
-      fontSize: 22,
+      fontSize: 20,
       lineHeight: 32,
       fontWeight: "900",
       letterSpacing: 0.3,
@@ -567,7 +581,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       ...roundedText,
       marginTop: 6,
       color: "#FFE0E0",
-      fontSize: 11,
+      fontSize: 8,
       lineHeight: 13,
       fontWeight: "700",
     },

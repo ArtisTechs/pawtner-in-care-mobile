@@ -1,7 +1,7 @@
 import { CommunityComposer } from "@/components/community/community-composer";
 import { CommunityPostCard } from "@/components/community/community-post-card";
 import { DashboardBottomNavbar } from "@/components/navigation/dashboard-bottom-navbar";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   COMMUNITY_ASSETS,
   COMMUNITY_CURRENT_USER,
@@ -13,11 +13,9 @@ import type {
   SubmitCommunityPostInput,
 } from "@/features/community/community.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
-  Image,
   Pressable,
   StatusBar,
   StyleSheet,
@@ -31,7 +29,6 @@ const MAX_CONTENT_WIDTH = 420;
 const NAVBAR_RESERVED_SPACE = 84;
 
 export default function CommunityScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
@@ -43,15 +40,6 @@ export default function CommunityScreen() {
   );
   const feedListRef = useRef<FlatList<CommunityPost>>(null);
   const [posts, setPosts] = useState<CommunityPost[]>(() => getCommunityPosts());
-
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.replace("/(tabs)");
-  };
 
   const handleSubmitPost = useCallback((input: SubmitCommunityPostInput) => {
     const trimmedCaption = input.caption.trim();
@@ -118,23 +106,7 @@ export default function CommunityScreen() {
         ]}
       >
         <View style={styles.headerContent}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={handleBack}
-            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-          >
-            <Image
-              source={COMMUNITY_ASSETS.backIcon}
-              style={styles.backIcon}
-              resizeMode="contain"
-            />
-          </Pressable>
-
-          <Image
-            source={COMMUNITY_ASSETS.titleImage}
-            style={styles.headerTitleImage}
-            resizeMode="contain"
-          />
+          <Text style={styles.headerTitleText}>COMMUNITY</Text>
         </View>
       </View>
 
@@ -206,26 +178,15 @@ const createStyles = (
       minHeight: 42,
       alignItems: "center",
       justifyContent: "center",
-      position: "relative",
       paddingHorizontal: 24,
     },
-    backButton: {
-      position: "absolute",
-      left: 24,
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    backIcon: {
-      width: 24,
-      height: 24,
-      tintColor: colors.dashboardBottomIcon,
-    },
-    headerTitleImage: {
-      width: 180,
-      height: 30,
+    headerTitleText: {
+      fontFamily: DisplayFontFamily,
+      color: colors.loginHeaderGradientStart,
+      fontSize: 32,
+      lineHeight: 32,
+      letterSpacing: 0.6,
+      textAlign: "center",
     },
     feedWrap: {
       flex: 1,

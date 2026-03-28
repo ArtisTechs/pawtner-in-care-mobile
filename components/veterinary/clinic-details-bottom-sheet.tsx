@@ -1,7 +1,7 @@
 import { ClinicInfoBadge } from "@/components/veterinary/clinic-info-badge";
 import { ClinicMediaPreviewCard } from "@/components/veterinary/clinic-media-preview-card";
 import { ClinicProfileCard } from "@/components/veterinary/clinic-profile-card";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import type { VeterinaryClinicItem } from "@/features/veterinary/veterinary.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import * as Linking from "expo-linking";
@@ -135,9 +135,9 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingRight: 2,
     },
     title: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: DisplayFontFamily,
       color: colors.petDetailsTextPrimary,
-      fontSize: 42,
+      fontSize: 48,
       lineHeight: 46,
       fontWeight: "900",
     },
@@ -176,7 +176,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginBottom: 10,
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextPrimary,
-      fontSize: 17,
+      fontSize: 16,
       lineHeight: 21,
       fontWeight: "800",
     },

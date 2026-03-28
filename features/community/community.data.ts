@@ -8,7 +8,6 @@ const HASHTAG_PATTERN = /#[A-Za-z0-9_]+/g;
 
 export const COMMUNITY_ASSETS = {
   backIcon: require("../../assets/images/back-icon.png"),
-  titleImage: require("../../assets/images/community-title.png"),
   currentUserAvatar: require("../../assets/images/cat.png"),
 } as const;
 

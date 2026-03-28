@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   detail: {
     fontFamily: RoundedFontFamily,
-    fontSize: 10,
+    fontSize: 8,
     lineHeight: 11,
     fontWeight: "600",
   },
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontFamily: RoundedFontFamily,
-    fontSize: 9,
+    fontSize: 8,
     lineHeight: 11,
     fontWeight: "600",
     flex: 1,

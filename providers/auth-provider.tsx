@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useState } from "react";
 
 import { authService } from "@/services/auth/auth.service";
 import { authStorage } from "@/services/auth/auth.storage";
+import { donationStorage } from "@/services/donations/donation.storage";
 import { sessionPreloadService } from "@/services/preload/session-preload.service";
 import type {
   AuthContextValue,
@@ -66,6 +67,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const userId = session?.user.id;
     setSession(null);
     await sessionPreloadService.clearSessionCache(userId);
+
+    try {
+      await donationStorage.clearAllDonationIntroSeen();
+    } catch {
+      // Keep sign-out non-blocking even if optional cleanup fails.
+    }
   };
 
   const sendOtp = async (payload: SendOtpPayload) => {

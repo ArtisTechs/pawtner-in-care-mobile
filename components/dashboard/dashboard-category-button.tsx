@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: RoundedFontFamily,
-    fontSize: 12,
+    fontSize: 14,
     lineHeight: 14,
     fontWeight: "700",
     textAlign: "center",

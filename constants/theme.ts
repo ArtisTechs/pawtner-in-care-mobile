@@ -161,4 +161,78 @@ export const Fonts = Platform.select({
   },
 });
 
-export const RoundedFontFamily = Fonts?.rounded ?? "sans-serif";
+export const DisplayFontFamily = Platform.select({
+  ios: "Frankfurter-Regular",
+  android: "Frankfurter-Regular",
+  default: "sans-serif",
+  web: "'Frankfurter', 'Cooper Black', 'Arial Rounded MT Bold', sans-serif",
+});
+
+export const SourceSansRegularFontFamily = Platform.select({
+  ios: "SourceSansPro-Regular",
+  android: "SourceSansPro-Regular",
+  default: Fonts?.sans ?? "sans-serif",
+  web: "'Source Sans Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+});
+
+export const SourceSansSemiBoldFontFamily = Platform.select({
+  ios: "SourceSansPro-SemiBold",
+  android: "SourceSansPro-SemiBold",
+  default: Fonts?.sans ?? "sans-serif",
+  web: "'Source Sans Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+});
+
+export const SourceSansBlackFontFamily = Platform.select({
+  ios: "SourceSansPro-Black",
+  android: "SourceSansPro-Black",
+  default: Fonts?.sans ?? "sans-serif",
+  web: "'Source Sans Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+});
+
+export const Typography = {
+  heading1: {
+    fontFamily: DisplayFontFamily,
+    fontSize: 48,
+    lineHeight: 56,
+    fontWeight: "400" as const,
+  },
+  heading2: {
+    fontFamily: DisplayFontFamily,
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: "600" as const,
+  },
+  heading3: {
+    fontFamily: SourceSansBlackFontFamily,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: "900" as const,
+  },
+  body1: {
+    fontFamily: SourceSansRegularFontFamily,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "400" as const,
+  },
+  body2: {
+    fontFamily: SourceSansRegularFontFamily,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "400" as const,
+  },
+  body2SemiBold: {
+    fontFamily: SourceSansSemiBoldFontFamily,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600" as const,
+  },
+  body3: {
+    fontFamily: SourceSansRegularFontFamily,
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: "400" as const,
+  },
+};
+
+// Legacy alias to keep existing imports stable while moving to Source Sans text.
+export const RoundedFontFamily = Typography.body1.fontFamily;

@@ -1,6 +1,6 @@
 import { DonationCard } from "@/components/donations/donation-card";
 import { DonationFilterChip } from "@/components/donations/donation-filter-chip";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   DONATION_ASSETS,
   DONATION_FILTER_OPTIONS,
@@ -125,11 +125,7 @@ export default function DonationListingScreen() {
 
               <View style={styles.titleBlock}>
                 <Text style={styles.kicker}>LOOKING FOR A</Text>
-                <Image
-                  source={DONATION_ASSETS.donateNowTitle}
-                  style={styles.titleImage}
-                  resizeMode="contain"
-                />
+                <Text style={styles.titleText}>DONATE NOW</Text>
               </View>
             </View>
 
@@ -224,10 +220,14 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       alignItems: "center",
       justifyContent: "center",
     },
-    titleImage: {
-      width: 208,
-      height: 48,
-      marginTop: -4,
+    titleText: {
+      marginTop: -1,
+      fontFamily: DisplayFontFamily,
+      color: colors.dashboardHeaderText,
+      fontSize: 32,
+      lineHeight: 34,
+      letterSpacing: 0.4,
+      textAlign: "center",
     },
     kicker: {
       ...roundedText,
@@ -239,9 +239,10 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
     },
     title: {
       ...roundedText,
+      fontFamily: DisplayFontFamily,
       marginTop: 2,
       color: colors.dashboardHeaderText,
-      fontSize: 34,
+      fontSize: 32,
       lineHeight: 37,
       fontWeight: "900",
       letterSpacing: 0.4,

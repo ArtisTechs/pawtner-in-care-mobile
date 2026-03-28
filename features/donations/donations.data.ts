@@ -12,7 +12,6 @@ type DonationFilterOption = {
 export const DONATION_ASSETS = {
   backIcon: require("../../assets/images/back-icon.png"),
   donateIcon: require("../../assets/images/donate-icon.png"),
-  donateNowTitle: require("../../assets/images/donate-now-title.png"),
   frontPageIcon: require("../../assets/images/donate-front-page-icon.png"),
   profileAvatar: require("../../assets/images/cat.png"),
   defaultCauseImage: require("../../assets/images/dog.png"),

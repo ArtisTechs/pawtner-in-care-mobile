@@ -1,4 +1,4 @@
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import type { EventItem } from "@/features/events/events.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -246,7 +246,7 @@ const createStyles = (colors: typeof Colors.light) =>
     swipeHintText: {
       fontFamily: RoundedFontFamily,
       color: colors.white,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "900",
       letterSpacing: 0.3,
@@ -276,7 +276,7 @@ const createStyles = (colors: typeof Colors.light) =>
     eventTitle: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 24,
+      fontSize: 20,
       lineHeight: 28,
       fontWeight: "900",
     },
@@ -284,7 +284,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 4,
       fontFamily: RoundedFontFamily,
       color: "#2B73BD",
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "800",
     },
@@ -297,20 +297,20 @@ const createStyles = (colors: typeof Colors.light) =>
     metaLabel: {
       fontFamily: RoundedFontFamily,
       color: "rgba(44, 56, 73, 0.78)",
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "700",
     },
     metaBullet: {
       color: "rgba(44, 56, 73, 0.48)",
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "800",
     },
     metaValue: {
       fontFamily: RoundedFontFamily,
       color: "rgba(44, 56, 73, 0.72)",
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "700",
     },
@@ -318,7 +318,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 8,
       fontFamily: RoundedFontFamily,
       color: "#4A6F9B",
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "600",
     },
@@ -334,9 +334,9 @@ const createStyles = (colors: typeof Colors.light) =>
       alignItems: "center",
     },
     statValue: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: DisplayFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 35,
+      fontSize: 32,
       lineHeight: 38,
       fontWeight: "900",
     },
@@ -344,7 +344,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 1,
       fontFamily: RoundedFontFamily,
       color: "#4A6F9B",
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 18,
       fontWeight: "700",
     },
@@ -370,7 +370,7 @@ const createStyles = (colors: typeof Colors.light) =>
       flex: 1,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIconActive,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "700",
     },
@@ -391,7 +391,7 @@ const createStyles = (colors: typeof Colors.light) =>
     joinButtonText: {
       fontFamily: RoundedFontFamily,
       color: colors.white,
-      fontSize: 19,
+      fontSize: 20,
       lineHeight: 22,
       fontWeight: "900",
     },

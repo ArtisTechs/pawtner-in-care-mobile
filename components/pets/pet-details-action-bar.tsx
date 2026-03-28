@@ -119,7 +119,7 @@ const createStyles = (colors: typeof Colors.light) =>
     adoptText: {
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsAdoptButtonText,
-      fontSize: 17,
+      fontSize: 16,
       lineHeight: 21,
       fontWeight: "900",
       letterSpacing: 0.8,

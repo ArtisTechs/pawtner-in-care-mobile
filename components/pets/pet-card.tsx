@@ -131,7 +131,7 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     name: {
       fontFamily: RoundedFontFamily,
-      fontSize: 23,
+      fontSize: 20,
       lineHeight: 26,
       fontWeight: "800",
       color: colors.dashboardBottomIconActive,
@@ -146,7 +146,7 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     secondary: {
       fontFamily: RoundedFontFamily,
-      fontSize: 13,
+      fontSize: 14,
       lineHeight: 15,
       fontWeight: "600",
       color: colors.dashboardBottomIcon,

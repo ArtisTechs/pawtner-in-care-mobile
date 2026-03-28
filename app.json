@@ -39,9 +39,16 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Pawtner to access your camera to report stray cats and dogs."
+        }
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Pawtner to access your photos for donation proof upload."
+          "photosPermission": "Allow Pawtner to access your photos for donation proof upload.",
+          "cameraPermission": "Allow Pawtner to access your camera to report stray cats and dogs."
         }
       ],
       [

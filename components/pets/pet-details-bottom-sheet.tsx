@@ -1,7 +1,7 @@
 import { PetDetailAttributeCard } from "@/components/pets/pet-detail-attribute-card";
 import { PetFosterInfoRow } from "@/components/pets/pet-foster-info-row";
 import { PetMediaPreviewCard } from "@/components/pets/pet-media-preview-card";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import type { PetDetailsItem } from "@/features/pets/pets.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -155,7 +155,7 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingRight: 10,
     },
     petName: {
-      fontFamily: RoundedFontFamily,
+      fontFamily: DisplayFontFamily,
       color: colors.petDetailsTextPrimary,
       fontSize: 48,
       lineHeight: 54,
@@ -165,7 +165,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 1,
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextSecondary,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 20,
       fontWeight: "700",
     },
@@ -219,7 +219,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 2,
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextSecondary,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 16,
       fontWeight: "600",
     },
@@ -228,7 +228,7 @@ const createStyles = (colors: typeof Colors.light) =>
       marginBottom: 10,
       fontFamily: RoundedFontFamily,
       color: colors.petDetailsTextPrimary,
-      fontSize: 17,
+      fontSize: 16,
       lineHeight: 22,
       fontWeight: "800",
     },

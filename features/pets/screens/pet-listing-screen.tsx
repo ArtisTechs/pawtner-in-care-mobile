@@ -1,7 +1,7 @@
 import { PetCard } from "@/components/pets/pet-card";
 import { PetFilterChip } from "@/components/pets/pet-filter-chip";
 import { FullScreenLoader } from "@/components/ui/full-screen-loader";
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   PET_ASSETS,
   PET_FILTER_OPTIONS,
@@ -124,11 +124,7 @@ export default function PetListingScreen() {
 
         <View style={styles.titleBlock}>
           <Text style={styles.kicker}>LOOKING FOR A</Text>
-          <Image
-            source={PET_ASSETS.listingTitle}
-            style={styles.titleImage}
-            resizeMode="contain"
-          />
+          <Text style={styles.titleText}>PET LISTING</Text>
         </View>
       </View>
 
@@ -292,10 +288,14 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       fontWeight: "600",
       letterSpacing: 0.3,
     },
-    titleImage: {
+    titleText: {
       marginTop: 4,
-      width: 224,
-      height: 34,
+      fontFamily: DisplayFontFamily,
+      color: colors.dashboardHeaderText,
+      fontSize: 32,
+      lineHeight: 34,
+      letterSpacing: 0.4,
+      textAlign: "center",
     },
     searchWrap: {
       marginTop: 10,

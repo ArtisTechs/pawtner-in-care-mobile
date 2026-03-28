@@ -50,6 +50,11 @@ export default function DashboardScreen() {
   const handlePressPromoItem = (item: DashboardPromoItem) => {
     if (item.id === "donate-banner") {
       router.push("/donations");
+      return;
+    }
+
+    if (item.id === "community-banner") {
+      router.push("/community");
     }
   };
 
@@ -129,6 +134,8 @@ export default function DashboardScreen() {
                         ? () => router.push("/pets")
                         : item.id === "events"
                           ? () => router.push("/events")
+                          : item.id === "volunteer"
+                            ? () => router.push("/volunteer")
                           : item.id === "community"
                             ? () => router.push("/community")
                         : undefined
@@ -216,7 +223,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       marginTop: -2,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardBottomIcon,
-      fontSize: 11,
+      fontSize: 8,
       lineHeight: 14,
       fontWeight: "700",
       fontStyle: "italic",
@@ -243,7 +250,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
     greeting: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 15,
+      fontSize: 14,
       lineHeight: 19,
       fontWeight: "700",
     },
@@ -251,7 +258,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       marginTop: 4,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 24,
+      fontSize: 20,
       lineHeight: 30,
       fontWeight: "900",
       marginBottom: 18,
@@ -260,7 +267,7 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       marginTop: 18,
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 22,
       fontWeight: "900",
     },
@@ -281,14 +288,14 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
     waitingTitle: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardHeaderText,
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 22,
       fontWeight: "900",
     },
     seeAll: {
       fontFamily: RoundedFontFamily,
       color: colors.dashboardSubtleText,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: 14,
       fontWeight: "600",
     },

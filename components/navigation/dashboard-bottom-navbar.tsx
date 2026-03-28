@@ -49,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
 const ROUTE_MAP: Partial<Record<DashboardBottomNavKey, Href>> = {
   home: "/(tabs)",
   chat: "/support",
+  sos: "/sos",
   community: "/community",
   profile: "/profile",
 };
@@ -73,7 +74,12 @@ export function DashboardBottomNavbar({
       return;
     }
 
-    router.push(route);
+    if (key === "sos") {
+      router.push(route);
+      return;
+    }
+
+    router.replace(route);
   };
 
   const renderNavIcon = (item: NavItem) => {
@@ -261,7 +267,7 @@ const createStyles = (colors: typeof Colors.light) =>
       fontFamily: RoundedFontFamily,
       color: colors.dashboardSosText,
       fontWeight: "900",
-      fontSize: 18,
+      fontSize: 16,
       lineHeight: 20,
     },
     pressed: {
