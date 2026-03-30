@@ -9,7 +9,7 @@ import type { CommunityPost } from "@/features/community/community.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React, { useMemo } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type CommunityPostCardProps = {
   post: CommunityPost;
@@ -26,8 +26,13 @@ export function CommunityPostCard({
   const colors = Colors[colorScheme];
   const styles = useMemo(() => createStyles(colors), [colors]);
   const hashtagsText = post.hashtags.join(" ");
-  const hasBodyContent = Boolean(post.caption || hashtagsText);
+  const postBodyText = [post.caption, hashtagsText].filter(Boolean).join(" ").trim();
+  const hasBodyContent = Boolean(postBodyText);
   const avatarSource = resolveOptionalImageSource(post.userAvatar);
+  const postImages = post.images ?? [];
+  const hasVideo = Boolean(post.videoUri);
+  const hasSingleImage = postImages.length === 1;
+  const hasMultipleImages = postImages.length > 1;
 
   return (
     <View style={styles.card}>
@@ -59,12 +64,11 @@ export function CommunityPostCard({
 
       {hasBodyContent ? (
         <View style={styles.body}>
-          {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
-          {hashtagsText ? <Text style={styles.hashtags}>{hashtagsText}</Text> : null}
+          <Text style={styles.caption}>{postBodyText}</Text>
         </View>
       ) : null}
 
-      {post.mediaType === "video" ? (
+      {hasVideo ? (
         <View style={styles.videoPreview}>
           <MaterialIcons
             color={colors.white}
@@ -75,12 +79,35 @@ export function CommunityPostCard({
         </View>
       ) : null}
 
-      {post.image ? (
+      {hasSingleImage ? (
         <Image
-          source={resolveImageSource(post.image)}
+          source={resolveImageSource(postImages[0])}
           style={styles.postImage}
           resizeMode="cover"
         />
+      ) : null}
+
+      {hasMultipleImages ? (
+        <View style={styles.multiImageWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.multiImageContent}
+          >
+            {postImages.map((image, index) => (
+              <Image
+                key={`${post.id}-image-${index}`}
+                source={resolveImageSource(image)}
+                style={styles.multiImage}
+                resizeMode="cover"
+              />
+            ))}
+          </ScrollView>
+
+          <Text style={styles.multiImageCount}>
+            {postImages.length} photos
+          </Text>
+        </View>
       ) : null}
 
       <PostActionRow
@@ -164,14 +191,6 @@ const createStyles = (colors: typeof Colors.light) =>
       lineHeight: 20,
       fontWeight: "500",
     },
-    hashtags: {
-      marginTop: 4,
-      fontFamily: RoundedFontFamily,
-      color: colors.dashboardBottomIconActive,
-      fontSize: 14,
-      lineHeight: 18,
-      fontWeight: "900",
-    },
     videoPreview: {
       width: "100%",
       minHeight: 170,
@@ -191,5 +210,30 @@ const createStyles = (colors: typeof Colors.light) =>
       width: "100%",
       aspectRatio: 1.58,
       backgroundColor: "rgba(44, 110, 184, 0.12)",
+    },
+    multiImageWrap: {
+      width: "100%",
+      paddingTop: 10,
+      paddingBottom: 8,
+    },
+    multiImageContent: {
+      paddingHorizontal: 10,
+      gap: 8,
+    },
+    multiImage: {
+      width: 230,
+      height: 168,
+      borderRadius: 10,
+      backgroundColor: "rgba(44, 110, 184, 0.12)",
+    },
+    multiImageCount: {
+      marginTop: 6,
+      paddingHorizontal: 14,
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 12,
+      lineHeight: 14,
+      fontWeight: "700",
+      opacity: 0.84,
     },
   });

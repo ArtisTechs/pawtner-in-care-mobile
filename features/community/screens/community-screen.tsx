@@ -43,7 +43,7 @@ export default function CommunityScreen() {
 
   const handleSubmitPost = useCallback((input: SubmitCommunityPostInput) => {
     const trimmedCaption = input.caption.trim();
-    const hasMedia = Boolean(input.mediaUri && input.mediaType);
+    const hasMedia = input.imageUris.length > 0 || Boolean(input.videoUri);
 
     if (!trimmedCaption && !hasMedia) {
       return;
@@ -54,8 +54,8 @@ export default function CommunityScreen() {
       userName: COMMUNITY_CURRENT_USER.name,
       userAvatar: COMMUNITY_CURRENT_USER.avatar,
       isVerified: COMMUNITY_CURRENT_USER.isVerified,
-      mediaUri: input.mediaUri,
-      mediaType: input.mediaType,
+      imageUris: input.imageUris,
+      videoUri: input.videoUri,
     });
 
     setPosts((currentPosts) => [newPost, ...currentPosts]);

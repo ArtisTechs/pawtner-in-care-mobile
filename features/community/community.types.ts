@@ -11,7 +11,8 @@ export type CommunityPost = {
   userAvatar: CommunityImageSource;
   isVerified: boolean;
   caption: string;
-  image?: CommunityImageSource;
+  images?: CommunityImageSource[];
+  videoUri?: string;
   mediaType?: CommunityPostMediaType;
   likeCount: number;
   commentCount: number;
@@ -22,15 +23,16 @@ export type CommunityPost = {
 
 export type CreateCommunityPostInput = {
   caption: string;
+  hashtags?: string[];
   userName: string;
   userAvatar: CommunityImageSource;
   isVerified?: boolean;
-  mediaUri?: string | null;
-  mediaType?: CommunityPostMediaType | null;
+  imageUris?: string[];
+  videoUri?: string | null;
 };
 
 export type SubmitCommunityPostInput = {
   caption: string;
-  mediaUri: string | null;
-  mediaType: CommunityPostMediaType | null;
+  imageUris: string[];
+  videoUri: string | null;
 };

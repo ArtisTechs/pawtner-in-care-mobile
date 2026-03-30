@@ -37,7 +37,12 @@ export function PaymentMethodSelect({
   return (
     <View style={[styles.wrapper, style]}>
       <View style={styles.fieldRow}>
-        <View style={styles.dropdownWrap}>
+        <View
+          style={[
+            styles.dropdownWrap,
+            isDropdownOpen && styles.dropdownWrapOpen,
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
             onPress={() => setIsDropdownOpen((currentValue) => !currentValue)}
@@ -101,6 +106,11 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     dropdownWrap: {
       flex: 0.92,
+      position: "relative",
+    },
+    dropdownWrapOpen: {
+      zIndex: 30,
+      elevation: 30,
     },
     dropdownButton: {
       minHeight: 30,
@@ -126,7 +136,10 @@ const createStyles = (colors: typeof Colors.light) =>
       marginRight: 6,
     },
     dropdownMenu: {
-      marginTop: 4,
+      position: "absolute",
+      top: 34,
+      left: 0,
+      right: 0,
       borderRadius: 8,
       overflow: "hidden",
       borderWidth: 1,

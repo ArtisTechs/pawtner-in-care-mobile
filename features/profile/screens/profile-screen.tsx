@@ -10,17 +10,25 @@ import {
 import type { ProfileSettingsKey } from "@/features/profile/profile.types";
 import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { authStorage } from "@/services/auth/auth.storage";
+import { userStorage } from "@/services/user/user.storage";
+import type { AuthSession } from "@/types/auth";
+import type { UserProfile } from "@/types/user";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   type ImageSourcePropType,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -28,6 +36,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MAX_CONTENT_WIDTH = 420;
 const NAVBAR_RESERVED_SPACE = 86;
+const normalizeNameValue = (value: string) => value.trim().replace(/\s+/g, " ");
 
 const resolveNonEmptyText = (value: unknown) => {
   if (typeof value !== "string") {
@@ -78,21 +87,79 @@ export default function ProfileScreen() {
     [colors, contentWidth],
   );
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isEditNameModalVisible, setIsEditNameModalVisible] = useState(false);
 
   const userRecord = session?.user as Record<string, unknown> | undefined;
+  const initialFirstName = useMemo(
+    () => resolveNonEmptyText(userRecord?.firstName) ?? "",
+    [userRecord?.firstName],
+  );
+  const initialMiddleName = useMemo(
+    () => resolveNonEmptyText(userRecord?.middleName) ?? "",
+    [userRecord?.middleName],
+  );
+  const initialLastName = useMemo(
+    () => resolveNonEmptyText(userRecord?.lastName) ?? "",
+    [userRecord?.lastName],
+  );
+  const fallbackName = useMemo(
+    () => resolveNonEmptyText(userRecord?.name),
+    [userRecord?.name],
+  );
+  const [firstName, setFirstName] = useState(initialFirstName);
+  const [middleName, setMiddleName] = useState(initialMiddleName);
+  const [lastName, setLastName] = useState(initialLastName);
+  const [draftFirstName, setDraftFirstName] = useState("");
+  const [draftMiddleName, setDraftMiddleName] = useState("");
+  const [draftLastName, setDraftLastName] = useState("");
+
   const fullName = useMemo(() => {
-    const firstName = resolveNonEmptyText(userRecord?.firstName);
-    const lastName = resolveNonEmptyText(userRecord?.lastName);
-    const fallbackName = resolveNonEmptyText(userRecord?.name);
-    const combinedName = [firstName, lastName].filter(Boolean).join(" ").trim();
+    const combinedName = [firstName, middleName, lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
 
     return combinedName || fallbackName || "Pawtner User";
-  }, [userRecord?.firstName, userRecord?.lastName, userRecord?.name]);
+  }, [fallbackName, firstName, middleName, lastName]);
   const email = useMemo(
     () => resolveNonEmptyText(userRecord?.email) ?? "user@pawtner.app",
     [userRecord?.email],
   );
   const avatarSource = useMemo(() => resolveAvatarSource(userRecord), [userRecord]);
+
+  useEffect(() => {
+    setFirstName(initialFirstName);
+    setMiddleName(initialMiddleName);
+    setLastName(initialLastName);
+  }, [initialFirstName, initialLastName, initialMiddleName]);
+
+  useEffect(() => {
+    const userId = resolveNonEmptyText(userRecord?.id);
+
+    if (!userId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const hydrateCachedName = async () => {
+      const cachedProfile = await userStorage.getUserProfile(userId);
+
+      if (!isMounted || !cachedProfile) {
+        return;
+      }
+
+      setFirstName(resolveNonEmptyText(cachedProfile.firstName) ?? "");
+      setMiddleName(resolveNonEmptyText(cachedProfile.middleName) ?? "");
+      setLastName(resolveNonEmptyText(cachedProfile.lastName) ?? "");
+    };
+
+    void hydrateCachedName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userRecord?.id]);
 
   const handleSignOut = async () => {
     if (isSigningOut) {
@@ -113,9 +180,70 @@ export default function ProfileScreen() {
     // TODO: connect add badge flow when profile badge management screen is available.
   };
 
+  const handleOpenEditProfileNames = () => {
+    setDraftFirstName(firstName);
+    setDraftMiddleName(middleName);
+    setDraftLastName(lastName);
+    setIsEditNameModalVisible(true);
+  };
+
+  const handleCancelEditProfileNames = () => {
+    setDraftFirstName("");
+    setDraftMiddleName("");
+    setDraftLastName("");
+    setIsEditNameModalVisible(false);
+  };
+
+  const handleSaveProfileNames = () => {
+    const nextFirstName = normalizeNameValue(draftFirstName);
+    const nextMiddleName = normalizeNameValue(draftMiddleName);
+    const nextLastName = normalizeNameValue(draftLastName);
+    const nextFullName = [nextFirstName, nextMiddleName, nextLastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    setFirstName(nextFirstName);
+    setMiddleName(nextMiddleName);
+    setLastName(nextLastName);
+    setIsEditNameModalVisible(false);
+
+    const userId = resolveNonEmptyText(userRecord?.id);
+
+    if (!userId) {
+      return;
+    }
+
+    const currentUserProfile = (session?.user ?? {}) as UserProfile;
+    const nextUserProfile: UserProfile = {
+      ...currentUserProfile,
+      id: userId,
+      firstName: nextFirstName,
+      middleName: nextMiddleName || null,
+      lastName: nextLastName,
+      name: nextFullName || fallbackName || "Pawtner User",
+    };
+
+    void userStorage.setUserProfile(nextUserProfile);
+
+    if (!session) {
+      return;
+    }
+
+    const nextSession: AuthSession = {
+      ...session,
+      user: {
+        ...session.user,
+        ...nextUserProfile,
+      },
+    };
+
+    void authStorage.setSession(nextSession);
+  };
+
   const handlePressSetting = (settingKey: ProfileSettingsKey) => {
     if (settingKey === "profile-settings") {
-      // TODO: route to profile settings screen once implemented.
+      handleOpenEditProfileNames();
       return;
     }
 
@@ -198,6 +326,100 @@ export default function ProfileScreen() {
         </View>
       </LinearGradient>
 
+      <Modal
+        animationType="fade"
+        onRequestClose={handleCancelEditProfileNames}
+        transparent
+        visible={isEditNameModalVisible}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleCancelEditProfileNames}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalKeyboardWrap}
+          >
+            <View
+              style={[
+                styles.modalCard,
+                {
+                  paddingBottom: insets.bottom + 16,
+                },
+              ]}
+            >
+              <Text style={styles.modalTitle}>Edit Profile Name</Text>
+
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>First Name</Text>
+                <TextInput
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  onChangeText={setDraftFirstName}
+                  placeholder="Enter first name"
+                  placeholderTextColor="rgba(42, 102, 171, 0.56)"
+                  style={styles.modalInput}
+                  value={draftFirstName}
+                />
+              </View>
+
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Middle Name</Text>
+                <TextInput
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  onChangeText={setDraftMiddleName}
+                  placeholder="Enter middle name"
+                  placeholderTextColor="rgba(42, 102, 171, 0.56)"
+                  style={styles.modalInput}
+                  value={draftMiddleName}
+                />
+              </View>
+
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Last Name</Text>
+                <TextInput
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  onChangeText={setDraftLastName}
+                  placeholder="Enter last name"
+                  placeholderTextColor="rgba(42, 102, 171, 0.56)"
+                  style={styles.modalInput}
+                  value={draftLastName}
+                />
+              </View>
+
+              <View style={styles.modalButtonRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleCancelEditProfileNames}
+                  style={({ pressed }) => [
+                    styles.modalCancelButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleSaveProfileNames}
+                  style={({ pressed }) => [
+                    styles.modalSaveButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.modalSaveButtonText}>Save</Text>
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
       <DashboardBottomNavbar activeKey="profile" />
     </View>
   );
@@ -277,6 +499,93 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
     settingsList: {
       marginTop: 8,
       gap: 8,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(11, 28, 51, 0.38)",
+      justifyContent: "flex-end",
+    },
+    modalKeyboardWrap: {
+      width: "100%",
+    },
+    modalCard: {
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      backgroundColor: "#E8F1FB",
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      gap: 10,
+    },
+    modalTitle: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIconActive,
+      fontSize: 22,
+      lineHeight: 26,
+      fontWeight: "900",
+      textAlign: "center",
+    },
+    modalInputGroup: {
+      gap: 6,
+    },
+    modalInputLabel: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 13,
+      lineHeight: 15,
+      fontWeight: "800",
+      paddingHorizontal: 2,
+    },
+    modalInput: {
+      minHeight: 46,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: "rgba(29, 78, 136, 0.2)",
+      backgroundColor: colors.white,
+      paddingHorizontal: 12,
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: "700",
+    },
+    modalButtonRow: {
+      marginTop: 4,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    modalCancelButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: "rgba(29, 78, 136, 0.24)",
+      backgroundColor: "rgba(255,255,255,0.9)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalSaveButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 22,
+      backgroundColor: colors.dashboardBottomBarBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalCancelButtonText: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 16,
+      lineHeight: 18,
+      fontWeight: "800",
+    },
+    modalSaveButtonText: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIconActive,
+      fontSize: 16,
+      lineHeight: 18,
+      fontWeight: "900",
     },
     pressed: {
       opacity: 0.84,

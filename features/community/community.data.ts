@@ -27,8 +27,9 @@ export const COMMUNITY_POSTS_MOCK_DATA: CommunityPost[] = [
     caption: "sarap ng tulog ng babies ko hehe.",
     hashtags: ["#catslife", "#orangecat", "#puspin"],
     mediaType: "image",
-    image:
+    images: [
       "https://images.pexels.com/photos/16074114/pexels-photo-16074114.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&dpr=2",
+    ],
     likeCount: 21,
     commentCount: 32,
     createdAtLabel: "2h",
@@ -43,8 +44,9 @@ export const COMMUNITY_POSTS_MOCK_DATA: CommunityPost[] = [
     caption: "meet my newly adopted catto, kwekwek :3",
     hashtags: [],
     mediaType: "image",
-    image:
+    images: [
       "https://images.pexels.com/photos/127028/pexels-photo-127028.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&dpr=2",
+    ],
     likeCount: 17,
     commentCount: 12,
     createdAtLabel: "4h",
@@ -78,8 +80,9 @@ export const extractHashtags = (caption: string) => {
   return caption.match(HASHTAG_PATTERN) ?? [];
 };
 
-const removeHashtagsFromCaption = (caption: string) => {
-  return caption.replace(HASHTAG_PATTERN, "").replace(/\s{2,}/g, " ").trim();
+const normalizeHashtag = (hashtag: string) => {
+  const cleaned = hashtag.trim().replace(/^#+/, "");
+  return cleaned ? `#${cleaned}` : "";
 };
 
 const createPostId = () => {
@@ -88,25 +91,39 @@ const createPostId = () => {
 
 export const createLocalCommunityPost = ({
   caption,
+  hashtags = [],
   userName,
   userAvatar,
   isVerified = false,
-  mediaUri = null,
-  mediaType = null,
+  imageUris = [],
+  videoUri = null,
 }: CreateCommunityPostInput): CommunityPost => {
   const trimmedCaption = caption.trim();
-  const hashtags = extractHashtags(trimmedCaption);
-  const captionWithoutHashtags = removeHashtagsFromCaption(trimmedCaption);
+  const captionHashtags = extractHashtags(trimmedCaption);
+  const combinedHashtags = Array.from(
+    new Set([...captionHashtags, ...hashtags].map(normalizeHashtag).filter(Boolean)),
+  );
+  const normalizedImageUris = imageUris
+    .map((uri) => uri.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  const normalizedVideoUri = videoUri?.trim() ? videoUri.trim() : undefined;
+  const mediaType = normalizedVideoUri
+    ? "video"
+    : normalizedImageUris.length
+      ? "image"
+      : undefined;
 
   return {
     id: createPostId(),
     userName,
     userAvatar,
     isVerified,
-    caption: captionWithoutHashtags || trimmedCaption,
-    hashtags,
-    mediaType: mediaType ?? undefined,
-    image: mediaType === "image" && mediaUri ? mediaUri : undefined,
+    caption: trimmedCaption,
+    hashtags: combinedHashtags,
+    mediaType,
+    images: normalizedImageUris,
+    videoUri: normalizedVideoUri,
     likeCount: 0,
     commentCount: 0,
     createdAtLabel: "Just now",

@@ -69,7 +69,6 @@ export default function RootLayout() {
               <Stack.Screen name="heroes-wall" />
               <Stack.Screen name="donations" />
               <Stack.Screen name="sos" />
-              <Stack.Screen name="modal" options={{ presentation: "modal" }} />
             </Stack>
             <StatusBar style="auto" backgroundColor={themeColors.background} />
           </View>

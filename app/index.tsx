@@ -31,7 +31,10 @@ export default function Index() {
   const ringRotate = useRef(new Animated.Value(0)).current;
   const ringOpacity = useRef(new Animated.Value(1)).current;
   const rippleScale = useRef(new Animated.Value(0)).current;
+  const ringLoopRef = useRef<Animated.CompositeAnimation | null>(null);
   const [isAnimationComplete, setIsAnimationComplete] = useState(false);
+  const [isIntroComplete, setIsIntroComplete] = useState(false);
+  const [isExitStarted, setIsExitStarted] = useState(false);
 
   useEffect(() => {
     // Logo entrance
@@ -59,44 +62,60 @@ export default function Index() {
         useNativeDriver: true,
       }),
     );
+    ringLoopRef.current = ringLoop;
     ringLoop.start();
 
-    // After 2s: ripple expands
-    const rippleTimer = setTimeout(() => {
-      ringLoop.stop();
-
-      Animated.parallel([
-        Animated.timing(ringOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rippleScale, {
-          toValue: RIPPLE_SCALE_TARGET,
-          duration: 1600,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Ripple done: fade out the logo circle
-        Animated.timing(logoOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          setIsAnimationComplete(true);
-        });
-      });
+    // Keep intro visible for at least 2s before allowing exit transition.
+    const introTimer = setTimeout(() => {
+      setIsIntroComplete(true);
     }, 2000);
 
     return () => {
-      clearTimeout(rippleTimer);
+      clearTimeout(introTimer);
+      ringLoop.stop();
+      ringLoopRef.current = null;
     };
   }, [
     logoOpacity,
     logoScale,
-    ringOpacity,
     ringRotate,
+  ]);
+
+  useEffect(() => {
+    if (isHydrating || !isIntroComplete || isExitStarted) {
+      return;
+    }
+
+    setIsExitStarted(true);
+    ringLoopRef.current?.stop();
+
+    Animated.parallel([
+      Animated.timing(ringOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rippleScale, {
+        toValue: RIPPLE_SCALE_TARGET,
+        duration: 1600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      Animated.timing(logoOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsAnimationComplete(true);
+      });
+    });
+  }, [
+    isExitStarted,
+    isHydrating,
+    isIntroComplete,
+    logoOpacity,
+    ringOpacity,
     rippleScale,
   ]);
 
