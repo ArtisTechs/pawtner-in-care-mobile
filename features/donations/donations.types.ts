@@ -1,38 +1,56 @@
 import type { ImageSourcePropType } from "react-native";
+import type {
+  DonationCampaignStatus,
+  DonationCampaignType,
+} from "@/types/donation-campaign";
 
-export type DonationCauseCategory = "health" | "foods" | "shelter";
-
-export type DonationFilter = "all" | "urgent" | "health" | "foods";
-
-export type DonationHomeSection = "urgent-fundraising" | "fund-strays";
+export type DonationFilter =
+  | "all"
+  | "urgent"
+  | "ongoing"
+  | "completed"
+  | "cancelled"
+  | "health"
+  | "food"
+  | "shelter"
+  | "rescue"
+  | "medicine"
+  | "education"
+  | "other";
 
 export type DonationCauseItem = {
-  id: string;
-  title: string;
+  deadline?: string;
   description: string;
-  shortLabel: string;
-  category: DonationCauseCategory;
+  id: string;
   image?: ImageSourcePropType | string;
-  raisedAmount: number;
-  targetAmount: number;
   isUrgent: boolean;
-  featuredOnHome: boolean;
-  homeSection: DonationHomeSection;
+  startDate?: string;
+  status: DonationCampaignStatus;
+  title: string;
+  totalCost: number;
+  totalDonatedCost: number;
+  type: DonationCampaignType;
+  updatedDate?: string;
+};
+
+export type DonationFilterOption = {
+  key: DonationFilter;
+  label: string;
 };
 
 export type DonationPaymentMethod = {
+  accountName: string;
+  accountNumber: string;
   id: string;
   name: string;
   qrImage: string;
-  accountName: string;
-  accountNumber: string;
   referenceLabel: string;
 };
 
 export type DonationPaymentDraft = {
   donationId: string;
   donationTitle: string;
-  donationCategory: DonationCauseCategory;
+  donationType: DonationCampaignType;
   selectedAmount: number | null;
   selectedPaymentModeId: string | null;
   qrImage: string | null;

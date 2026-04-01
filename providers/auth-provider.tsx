@@ -4,6 +4,7 @@ import { authService } from "@/services/auth/auth.service";
 import { authStorage } from "@/services/auth/auth.storage";
 import { donationStorage } from "@/services/donations/donation.storage";
 import { sessionPreloadService } from "@/services/preload/session-preload.service";
+import { userStorage } from "@/services/user/user.storage";
 import type {
   AuthContextValue,
   AuthSession,
@@ -53,6 +54,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signIn = async (payload: LoginPayload) => {
     const loginSession = await authService.login(payload);
+    const normalizedToken = loginSession.accessToken?.trim() ?? "";
+    const tokenPreview = normalizedToken
+      ? `${normalizedToken.slice(0, 12)}...`
+      : "";
+
+    console.log("[auth] Sign-in successful. Saving session to storage...", {
+      accessTokenPreview: tokenPreview,
+      hasAccessToken: Boolean(normalizedToken),
+      tokenType: loginSession.tokenType,
+      userId: loginSession.user?.id,
+    });
+
     const nextSession =
       await sessionPreloadService.preloadSessionData(loginSession);
     setSession(nextSession);
@@ -87,6 +100,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.resetPassword(payload);
   };
 
+  const updateSessionUser = async (nextUser: AuthSession["user"]) => {
+    if (!session) {
+      return;
+    }
+
+    const nextSession: AuthSession = {
+      ...session,
+      user: nextUser,
+    };
+
+    setSession(nextSession);
+    await authStorage.setSession(nextSession);
+    await userStorage.setUserProfile(nextUser);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -99,6 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         signIn,
         signOut,
         signUp,
+        updateSessionUser,
       }}
     >
       {children}

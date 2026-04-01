@@ -34,6 +34,7 @@ export function PetCard({ item, onPress, onToggleFavorite, style }: PetCardProps
         ? { uri: item.image }
         : defaultImage
       : item.image || defaultImage;
+  const hasAge = item.age.trim().length > 0;
 
   const handleFavoritePress = (event: GestureResponderEvent) => {
     event.stopPropagation();
@@ -67,8 +68,8 @@ export function PetCard({ item, onPress, onToggleFavorite, style }: PetCardProps
           </Text>
 
           <Text style={styles.meta}>{item.sex}</Text>
-          <Text style={styles.meta}>{item.age}</Text>
-          <Text style={styles.secondary}>
+          {hasAge ? <Text style={styles.meta}>{item.age}</Text> : null}
+          <Text style={[styles.secondary, !hasAge && styles.secondaryNoAge]}>
             {item.vaccinated ? "Vaccinated" : "Not Vaccinated"}
           </Text>
         </View>
@@ -107,6 +108,7 @@ const createStyles = (colors: typeof Colors.light) =>
       opacity: 0.95,
     },
     card: {
+      position: "relative",
       minHeight: 106,
       backgroundColor: colors.dashboardSectionCardBackground,
       borderRadius: 12,
@@ -128,6 +130,7 @@ const createStyles = (colors: typeof Colors.light) =>
       flex: 1,
       alignSelf: "stretch",
       justifyContent: "center",
+      paddingRight: 40,
     },
     name: {
       fontFamily: RoundedFontFamily,
@@ -152,6 +155,9 @@ const createStyles = (colors: typeof Colors.light) =>
       color: colors.dashboardBottomIcon,
       marginTop: 4,
     },
+    secondaryNoAge: {
+      marginTop: 0,
+    },
     favoriteButton: {
       width: 32,
       height: 32,
@@ -159,9 +165,9 @@ const createStyles = (colors: typeof Colors.light) =>
       backgroundColor: "#DAEAFE",
       alignItems: "center",
       justifyContent: "center",
-      marginRight: 4,
-      alignSelf: "flex-start",
-      marginTop: 8,
+      position: "absolute",
+      right: 8,
+      bottom: 8,
     },
     favoriteButtonActive: {
       backgroundColor: "#C6DFFE",

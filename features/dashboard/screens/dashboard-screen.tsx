@@ -7,16 +7,19 @@ import {
   DASHBOARD_ASSETS,
   DASHBOARD_CATEGORIES,
   DASHBOARD_PROMO_ITEMS,
-  DASHBOARD_WAITING_PETS,
+  type DashboardPetItem,
   type DashboardPromoItem,
 } from "@/features/dashboard/dashboard.data";
 import { NOTIFICATION_MOCK_DATA } from "@/features/notifications/notifications.data";
-import { getPetDetailsById } from "@/features/pets/pets.data";
+import { emitPetFavoriteChanged, subscribePetFavoriteChanged } from "@/features/pets/pet-favorite-sync";
+import { fetchPetListingItems, updatePetFavorite } from "@/features/pets/pets.data";
 import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/services/api/api-error";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -34,7 +37,7 @@ const MAX_CONTENT_WIDTH = 420;
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { isHydrating, session } = useAuth();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme() ?? "light";
@@ -48,10 +51,102 @@ export default function DashboardScreen() {
     () => NOTIFICATION_MOCK_DATA.some((notification) => !notification.isRead),
     [],
   );
+  const { showToast } = useToast();
+  const [waitingPets, setWaitingPets] = useState<DashboardPetItem[]>([]);
+  const [isWaitingPetsLoading, setIsWaitingPetsLoading] = useState(true);
+  const [favoriteSyncingPetIds, setFavoriteSyncingPetIds] = useState<Set<string>>(
+    () => new Set<string>(),
+  );
   const styles = useMemo(
     () => createStyles(colors, contentWidth),
     [colors, contentWidth],
   );
+  const isFavoriteSyncing = useCallback(
+    (petId: string) => favoriteSyncingPetIds.has(petId),
+    [favoriteSyncingPetIds],
+  );
+  const setFavoriteSyncingState = useCallback((petId: string, syncing: boolean) => {
+    setFavoriteSyncingPetIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (syncing) {
+        nextIds.add(petId);
+      } else {
+        nextIds.delete(petId);
+      }
+
+      return nextIds;
+    });
+  }, []);
+
+  const handleToggleFavorite = useCallback(async (petId: string) => {
+    if (!session?.accessToken || !session.user.id || isFavoriteSyncing(petId)) {
+      return;
+    }
+
+    const targetPet = waitingPets.find((pet) => pet.petId === petId);
+
+    if (!targetPet) {
+      return;
+    }
+
+    const previousFavoriteState = Boolean(targetPet.isFavorite);
+    const nextFavoriteState = !previousFavoriteState;
+    setWaitingPets((currentPets) =>
+      currentPets.map((pet) =>
+        pet.petId === petId ? { ...pet, isFavorite: nextFavoriteState } : pet,
+      ),
+    );
+    emitPetFavoriteChanged({
+      favorited: nextFavoriteState,
+      petId,
+    });
+    setFavoriteSyncingState(petId, true);
+
+    try {
+      const favorited = await updatePetFavorite({
+        favorited: nextFavoriteState,
+        petId,
+        token: session.accessToken,
+        userId: session.user.id,
+      });
+
+      if (favorited !== nextFavoriteState) {
+        setWaitingPets((currentPets) =>
+          currentPets.map((pet) =>
+            pet.petId === petId ? { ...pet, isFavorite: favorited } : pet,
+          ),
+        );
+        emitPetFavoriteChanged({
+          favorited,
+          petId,
+        });
+      }
+    } catch (error) {
+      setWaitingPets((currentPets) =>
+        currentPets.map((pet) =>
+          pet.petId === petId
+            ? { ...pet, isFavorite: previousFavoriteState }
+            : pet,
+        ),
+      );
+      emitPetFavoriteChanged({
+        favorited: previousFavoriteState,
+        petId,
+      });
+      showToast(getErrorMessage(error, "Unable to update favorite pet."), "error");
+    } finally {
+      setFavoriteSyncingState(petId, false);
+    }
+  }, [
+    isFavoriteSyncing,
+    session?.accessToken,
+    session?.user.id,
+    setFavoriteSyncingState,
+    showToast,
+    waitingPets,
+  ]);
+
   const handlePressPromoItem = (item: DashboardPromoItem) => {
     if (item.id === "donate-banner") {
       router.push("/donations");
@@ -62,6 +157,87 @@ export default function DashboardScreen() {
       router.push("/community");
     }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadWaitingPets = async () => {
+      if (isHydrating) {
+        if (isMounted) {
+          setIsWaitingPetsLoading(true);
+        }
+        return;
+      }
+
+      if (!session?.accessToken || !session.user.id) {
+        if (isMounted) {
+          setWaitingPets([]);
+          setIsWaitingPetsLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsWaitingPetsLoading(true);
+      }
+
+      try {
+        const listingPets = await fetchPetListingItems({
+          token: session.accessToken,
+          userId: session.user.id,
+        });
+
+        const favoriteListingPets = listingPets.filter((pet) => pet.isFavorite);
+        const sourcePets =
+          favoriteListingPets.length > 0 ? favoriteListingPets : listingPets;
+        const nextWaitingPets: DashboardPetItem[] = sourcePets
+          .slice(0, 10)
+          .map((pet) => ({
+            age: pet.age,
+            id: `waiting-${pet.id}`,
+            image: pet.image,
+            isFavorite: Boolean(pet.isFavorite),
+            name: pet.name,
+            petId: pet.id,
+            sex: pet.sex,
+            type: pet.type,
+            vaccinated: pet.vaccinated,
+          }));
+
+        if (isMounted) {
+          setWaitingPets(nextWaitingPets);
+        }
+      } catch (error) {
+        console.error("[dashboard] Failed to load waiting pets", error);
+
+        if (isMounted) {
+          setWaitingPets([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsWaitingPetsLoading(false);
+        }
+      }
+    };
+
+    void loadWaitingPets();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isHydrating, session?.accessToken, session?.user.id]);
+
+  useEffect(() => {
+    const unsubscribe = subscribePetFavoriteChanged(({ favorited, petId }) => {
+      setWaitingPets((currentPets) =>
+        currentPets.map((pet) =>
+          pet.petId === petId ? { ...pet, isFavorite: favorited } : pet,
+        ),
+      );
+    });
+
+    return unsubscribe;
+  }, []);
 
   return (
     <View style={styles.screen}>
@@ -170,38 +346,38 @@ export default function DashboardScreen() {
             </Pressable>
           </View>
 
-          <FlatList
-            horizontal
-            data={DASHBOARD_WAITING_PETS}
-            keyExtractor={(item) => item.id}
-            style={styles.edgeToEdgeList}
-            contentContainerStyle={styles.petListContent}
-            showsHorizontalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={styles.petListGap} />}
-            renderItem={({ item }) => {
-              const petDetails = getPetDetailsById(item.petId);
-
-              return (
-                <DashboardPetCard
-                  cardBackgroundColor={colors.dashboardSectionCardBackground}
-                  cardShadowColor={colors.dashboardShadow}
-                  item={{
-                    ...item,
-                    image: petDetails?.image ?? item.image,
-                    type: petDetails?.type ?? item.type,
-                  }}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/pet-details/[petId]",
-                      params: { petId: item.petId },
-                    })
-                  }
-                  subtitleColor={colors.dashboardBottomIcon}
-                  textColor={colors.dashboardBottomIconActive}
-                />
-              );
-            }}
-          />
+          {waitingPets.length > 0 ? (
+            <FlatList
+              horizontal
+              data={waitingPets}
+              keyExtractor={(item) => item.id}
+              style={styles.edgeToEdgeList}
+              contentContainerStyle={styles.petListContent}
+              showsHorizontalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.petListGap} />}
+              renderItem={({ item }) => {
+                return (
+                  <DashboardPetCard
+                    cardBackgroundColor={colors.dashboardSectionCardBackground}
+                    cardShadowColor={colors.dashboardShadow}
+                    favoriteDisabled={isFavoriteSyncing(item.petId)}
+                    item={item}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/pet-details/[petId]",
+                        params: { petId: item.petId },
+                      })
+                    }
+                    onToggleFavorite={handleToggleFavorite}
+                    subtitleColor={colors.dashboardBottomIcon}
+                    textColor={colors.dashboardBottomIconActive}
+                  />
+                );
+              }}
+            />
+          ) : isWaitingPetsLoading ? null : (
+            <Text style={styles.noPetsText}>No pets available right now.</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -346,5 +522,13 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
     },
     petListGap: {
       width: 12,
+    },
+    noPetsText: {
+      marginTop: 14,
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardSubtleText,
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: "700",
     },
   });

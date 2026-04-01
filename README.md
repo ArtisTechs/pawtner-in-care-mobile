@@ -76,11 +76,16 @@ Create a `.env` file in the project root if needed:
 ```bash
 EXPO_PUBLIC_API_BASE_URL=http://<your-api-host>:<port>/api
 EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=<optional-google-maps-key>
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=<your-cloudinary-cloud-name>
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET=<your-cloudinary-upload-preset>
+EXPO_PUBLIC_CLOUDINARY_FOLDER=<optional-target-folder>
 ```
 
 Notes:
 - `EXPO_PUBLIC_API_BASE_URL` is used by the API client.
 - `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` is optional; maps can fall back to Leaflet/OpenStreetMap behavior when no key is provided.
+- `EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME` and `EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET` are required for profile photo upload.
+- `EXPO_PUBLIC_CLOUDINARY_FOLDER` is optional.
 
 ## Requirements
 

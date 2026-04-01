@@ -3,6 +3,9 @@ import { Platform } from "react-native";
 
 type ExpoExtra = {
   apiBaseUrl?: string;
+  cloudinaryCloudName?: string;
+  cloudinaryFolder?: string;
+  cloudinaryUploadPreset?: string;
   googleMapsApiKey?: string;
 };
 
@@ -25,4 +28,21 @@ const configuredGoogleMapsApiKey =
 
 export const MAP_CONFIG = {
   googleMapsApiKey: configuredGoogleMapsApiKey.trim(),
+} as const;
+
+const configuredCloudinaryCloudName =
+  process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? extra.cloudinaryCloudName ?? "";
+
+const configuredCloudinaryUploadPreset =
+  process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET ??
+  extra.cloudinaryUploadPreset ??
+  "";
+
+const configuredCloudinaryFolder =
+  process.env.EXPO_PUBLIC_CLOUDINARY_FOLDER ?? extra.cloudinaryFolder ?? "";
+
+export const CLOUDINARY_CONFIG = {
+  cloudName: configuredCloudinaryCloudName.trim(),
+  folder: configuredCloudinaryFolder.trim(),
+  uploadPreset: configuredCloudinaryUploadPreset.trim(),
 } as const;

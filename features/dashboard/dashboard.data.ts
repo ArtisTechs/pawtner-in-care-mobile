@@ -15,6 +15,7 @@ export type DashboardCategoryItem = {
 export type DashboardPetItem = {
   age: string;
   vaccinated: boolean;
+  isFavorite?: boolean;
   id: string;
   petId: string;
   image?: ImageSourcePropType | string;

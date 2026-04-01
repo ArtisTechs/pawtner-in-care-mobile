@@ -1,19 +1,30 @@
 import { PetCard } from "@/components/pets/pet-card";
 import { PetFilterChip } from "@/components/pets/pet-filter-chip";
+import { AppToast } from "@/components/ui/app-toast";
 import { FullScreenLoader } from "@/components/ui/full-screen-loader";
 import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
+  fetchPetListingPage,
   PET_ASSETS,
   PET_FILTER_OPTIONS,
-  PET_LISTING_MOCK_DATA,
+  updatePetFavorite,
 } from "@/features/pets/pets.data";
-import type { PetFilter, PetListingItem } from "@/features/pets/pets.types";
+import { subscribePetFavoriteChanged } from "@/features/pets/pet-favorite-sync";
+import type {
+  PetFilter,
+  PetListingItem,
+  PetListingPagination,
+} from "@/features/pets/pets.types";
+import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useToast } from "@/hooks/use-toast";
+import { ApiError, getErrorMessage } from "@/services/api/api-error";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -27,7 +38,22 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MAX_CONTENT_WIDTH = 420;
-const PET_LIST_OPENING_LOADER_DELAY_MS = 700;
+const PET_PAGE_SIZE = 10;
+type FetchMode = "initial" | "nextPage" | "refresh";
+
+const mergePetListingItems = (
+  currentPets: PetListingItem[],
+  nextPets: PetListingItem[],
+) => {
+  const petsById = new Map(currentPets.map((pet) => [pet.id, pet]));
+
+  for (const pet of nextPets) {
+    const existingPet = petsById.get(pet.id);
+    petsById.set(pet.id, existingPet ? { ...existingPet, ...pet } : pet);
+  }
+
+  return Array.from(petsById.values());
+};
 
 export default function PetListingScreen() {
   const router = useRouter();
@@ -40,18 +66,135 @@ export default function PetListingScreen() {
     () => createStyles(colors, contentWidth),
     [colors, contentWidth],
   );
+  const { isHydrating, session } = useAuth();
+  const { hideToast, showToast, toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<PetFilter>("all");
-  const [pets, setPets] = useState(PET_LISTING_MOCK_DATA);
-  const [isOpeningLoaderVisible, setIsOpeningLoaderVisible] = useState(true);
+  const [pets, setPets] = useState<PetListingItem[]>([]);
+  const [pagination, setPagination] = useState<PetListingPagination | null>(null);
+  const [isFetchingPets, setIsFetchingPets] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFavoriteSyncing, setIsFavoriteSyncing] = useState(false);
+
+  const loadPets = useCallback(async (mode: FetchMode = "initial", targetPage = 0) => {
+    const isRefreshMode = mode === "refresh";
+    const isNextPageMode = mode === "nextPage";
+
+    if (isHydrating) {
+      if (isRefreshMode) {
+        setIsRefreshing(false);
+      } else if (isNextPageMode) {
+        setIsLoadingMore(false);
+      } else {
+        setIsFetchingPets(true);
+      }
+      return;
+    }
+
+    if (!session?.accessToken || !session.user.id) {
+      setPets([]);
+      setPagination(null);
+      setIsFetchingPets(false);
+      setIsLoadingMore(false);
+      setIsRefreshing(false);
+      return;
+    }
+
+    if (isNextPageMode) {
+      setIsLoadingMore(true);
+    } else if (isRefreshMode) {
+      setIsRefreshing(true);
+    } else {
+      setIsFetchingPets(true);
+    }
+
+    try {
+      const petListingResponse = await fetchPetListingPage({
+        page: targetPage,
+        size: PET_PAGE_SIZE,
+        token: session.accessToken,
+        userId: session.user.id,
+      });
+      setPagination(petListingResponse.pagination);
+      setPets((currentPets) =>
+        isNextPageMode
+          ? mergePetListingItems(currentPets, petListingResponse.items)
+          : petListingResponse.items,
+      );
+    } catch (error) {
+      if (!isNextPageMode) {
+        setPets([]);
+        setPagination(null);
+      }
+
+      if (error instanceof ApiError && error.status === 404) {
+        return;
+      }
+
+      showToast(getErrorMessage(error, "Unable to load pets."), "error");
+    } finally {
+      if (isNextPageMode) {
+        setIsLoadingMore(false);
+      } else if (isRefreshMode) {
+        setIsRefreshing(false);
+      } else {
+        setIsFetchingPets(false);
+      }
+    }
+  }, [
+    isHydrating,
+    session?.accessToken,
+    session?.user.id,
+    showToast,
+  ]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setIsOpeningLoaderVisible(false);
-    }, PET_LIST_OPENING_LOADER_DELAY_MS);
+    void loadPets("initial");
+  }, [isHydrating, loadPets, session?.accessToken, session?.user.id]);
 
-    return () => clearTimeout(timeoutId);
+  useEffect(() => {
+    const unsubscribe = subscribePetFavoriteChanged(({ favorited, petId }) => {
+      setPets((currentPets) =>
+        currentPets.map((pet) =>
+          pet.id === petId ? { ...pet, isFavorite: favorited } : pet,
+        ),
+      );
+    });
+
+    return unsubscribe;
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    if (isFavoriteSyncing || isLoadingMore) {
+      return;
+    }
+
+    void loadPets("refresh");
+  }, [isFavoriteSyncing, isLoadingMore, loadPets]);
+
+  const handleLoadMore = useCallback(() => {
+    if (
+      isFavoriteSyncing ||
+      isFetchingPets ||
+      isLoadingMore ||
+      isRefreshing ||
+      (pagination?.last ?? true)
+    ) {
+      return;
+    }
+
+    const nextPage = (pagination?.page ?? 0) + 1;
+    void loadPets("nextPage", nextPage);
+  }, [
+    isFavoriteSyncing,
+    isFetchingPets,
+    isLoadingMore,
+    isRefreshing,
+    pagination?.last,
+    pagination?.page,
+    loadPets,
+  ]);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -62,20 +205,68 @@ export default function PetListingScreen() {
     router.replace("/(tabs)");
   };
 
-  const handleToggleFavorite = (petId: string) => {
-    setPets((currentPets) =>
-      currentPets.map((pet) =>
-        pet.id === petId ? { ...pet, isFavorite: !pet.isFavorite } : pet,
-      ),
-    );
-  };
+  const handleToggleFavorite = useCallback(
+    async (petId: string) => {
+      if (
+        !session?.accessToken ||
+        !session.user.id ||
+        isFavoriteSyncing
+      ) {
+        return;
+      }
+
+      const targetPet = pets.find((pet) => pet.id === petId);
+
+      if (!targetPet) {
+        return;
+      }
+
+      const previousFavoriteState = Boolean(targetPet.isFavorite);
+      const nextFavoriteState = !previousFavoriteState;
+      setPets((currentPets) =>
+        currentPets.map((pet) =>
+          pet.id === petId ? { ...pet, isFavorite: nextFavoriteState } : pet,
+        ),
+      );
+      setIsFavoriteSyncing(true);
+
+      try {
+        const favorited = await updatePetFavorite({
+          favorited: nextFavoriteState,
+          petId,
+          token: session.accessToken,
+          userId: session.user.id,
+        });
+
+        if (favorited !== nextFavoriteState) {
+          setPets((currentPets) =>
+            currentPets.map((pet) =>
+              pet.id === petId ? { ...pet, isFavorite: favorited } : pet,
+            ),
+          );
+        }
+      } catch (error) {
+        setPets((currentPets) =>
+          currentPets.map((pet) =>
+            pet.id === petId ? { ...pet, isFavorite: previousFavoriteState } : pet,
+          ),
+        );
+        showToast(
+          getErrorMessage(error, "Unable to update favorite pet."),
+          "error",
+        );
+      } finally {
+        setIsFavoriteSyncing(false);
+      }
+    },
+    [isFavoriteSyncing, pets, session?.accessToken, session?.user.id, showToast],
+  );
 
   const handleOpenPetDetails = (pet: PetListingItem) => {
     router.push({
       pathname: "/pet-details/[petId]",
       params: {
         petId: pet.id,
-        isFavorite: String(Boolean(pet.isFavorite)),
       },
     });
   };
@@ -160,6 +351,28 @@ export default function PetListingScreen() {
     </View>
   );
 
+  const loaderSubtitle = "Loading the pets for you...";
+  const hasFiltersOrSearch = Boolean(searchTerm.trim()) || activeFilter !== "all";
+  const emptyMessage =
+    pets.length === 0 && !hasFiltersOrSearch
+      ? "No pets available right now."
+      : "No pets matched your filters.";
+  const shouldShowLoadMoreIndicator =
+    isLoadingMore && filteredPets.length > 0;
+  const shouldShowReachedEnd =
+    !isLoadingMore &&
+    filteredPets.length > 0 &&
+    Boolean(pagination?.last);
+  const listFooter = shouldShowLoadMoreIndicator ? (
+    <View style={styles.listFooter}>
+      <ActivityIndicator color={colors.dashboardBottomIcon} size="small" />
+    </View>
+  ) : shouldShowReachedEnd ? (
+    <View style={styles.listFooter}>
+      <Text style={styles.listFooterText}>You reached the end of the list.</Text>
+    </View>
+  ) : null;
+
   return (
     <View style={styles.screen}>
       <StatusBar
@@ -193,11 +406,10 @@ export default function PetListingScreen() {
           ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          ListFooterComponent={listFooter}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                No pets matched your filters.
-              </Text>
+              <Text style={styles.emptyText}>{emptyMessage}</Text>
             </View>
           }
           style={styles.list}
@@ -216,24 +428,30 @@ export default function PetListingScreen() {
               style={styles.card}
             />
           )}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          onRefresh={handleRefresh}
+          refreshing={isRefreshing}
           showsVerticalScrollIndicator={false}
         />
       </LinearGradient>
+
+      <AppToast onDismiss={hideToast} toast={toast} />
+
       <FullScreenLoader
         absolute
         backgroundColor="rgba(0, 0, 0, 0.24)"
-        subtitle="Loading the pets for you..."
-        visible={isOpeningLoaderVisible}
+        subtitle={loaderSubtitle}
+        visible={isFetchingPets}
       />
     </View>
   );
 }
 
-const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
-  {
-    const roundedText = { fontFamily: RoundedFontFamily } as const;
+const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
+  const roundedText = { fontFamily: RoundedFontFamily } as const;
 
-    return StyleSheet.create({
+  return StyleSheet.create({
     screen: {
       flex: 1,
       backgroundColor: colors.dashboardScreenBackground,
@@ -348,5 +566,20 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       lineHeight: 18,
       fontWeight: "700",
     },
-    });
-  };
+    listFooter: {
+      width: contentWidth,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: 8,
+      paddingBottom: 4,
+    },
+    listFooterText: {
+      ...roundedText,
+      color: colors.dashboardSubtleText,
+      fontSize: 13,
+      lineHeight: 17,
+      fontWeight: "600",
+      textAlign: "center",
+    },
+  });
+};

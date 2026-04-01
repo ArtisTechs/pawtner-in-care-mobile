@@ -1,6 +1,13 @@
 import { DonationProgressBar } from "@/components/donations/donation-progress-bar";
 import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
-import { DONATION_ASSETS } from "@/features/donations/donations.data";
+import {
+  DONATION_ASSETS,
+  formatDonationAmount,
+  formatDonationCampaignDate,
+  formatDonationCampaignStatus,
+  formatDonationCampaignType,
+  getDonationProgress,
+} from "@/features/donations/donations.data";
 import type { DonationCauseItem } from "@/features/donations/donations.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import React, { useMemo } from "react";
@@ -34,8 +41,6 @@ const resolveImageSource = (image?: DonationCauseItem["image"]) => {
   return image;
 };
 
-const formatAmount = (amount: number) => `\u20b1 ${amount.toLocaleString("en-PH")}`;
-
 export function DonationHomeHeroCard({
   item,
   onPress,
@@ -45,7 +50,11 @@ export function DonationHomeHeroCard({
   const colors = Colors[colorScheme];
   const styles = useMemo(() => createStyles(colors), [colors]);
   const imageSource = resolveImageSource(item.image);
-  const progress = item.targetAmount > 0 ? item.raisedAmount / item.targetAmount : 0;
+  const progress = getDonationProgress(item);
+  const statusLabel = formatDonationCampaignStatus(item.status);
+  const typeLabel = formatDonationCampaignType(item.type);
+  const categoryChipLabel = item.isUrgent ? "Urgent" : typeLabel;
+  const deadlineLabel = formatDonationCampaignDate(item.deadline);
 
   return (
     <Pressable
@@ -64,7 +73,12 @@ export function DonationHomeHeroCard({
         <Image source={imageSource} style={styles.image} resizeMode="cover" />
         <View style={styles.categoryChip}>
           <Text numberOfLines={1} style={styles.categoryChipText}>
-            {item.shortLabel}
+            {categoryChipLabel}
+          </Text>
+        </View>
+        <View style={styles.statusChip}>
+          <Text numberOfLines={1} style={styles.statusChipText}>
+            {statusLabel}
           </Text>
         </View>
       </View>
@@ -74,7 +88,7 @@ export function DonationHomeHeroCard({
           {item.title}
         </Text>
         <Text numberOfLines={2} style={styles.description}>
-          {item.description}
+          {item.description || "Your support helps this campaign reach its goal."}
         </Text>
 
         <View style={styles.progressWrap}>
@@ -82,10 +96,15 @@ export function DonationHomeHeroCard({
         </View>
 
         <Text style={styles.amount}>
-          <Text style={styles.raisedAmount}>{formatAmount(item.raisedAmount)}</Text>
+          <Text style={styles.raisedAmount}>
+            {formatDonationAmount(item.totalDonatedCost)}
+          </Text>
           <Text style={styles.amountDivider}> / </Text>
-          <Text style={styles.targetAmount}>{formatAmount(item.targetAmount)}</Text>
+          <Text style={styles.targetAmount}>{formatDonationAmount(item.totalCost)}</Text>
         </Text>
+        {deadlineLabel ? (
+          <Text style={styles.deadlineText}>{`Deadline: ${deadlineLabel}`}</Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -127,6 +146,24 @@ const createStyles = (colors: typeof Colors.light) =>
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 14,
+    },
+    statusChip: {
+      position: "absolute",
+      top: 14,
+      right: 14,
+      minHeight: 24,
+      borderRadius: 999,
+      backgroundColor: "rgba(31, 53, 80, 0.74)",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 10,
+    },
+    statusChipText: {
+      fontFamily: RoundedFontFamily,
+      color: "#F4F8FD",
+      fontSize: 8,
+      lineHeight: 12,
+      fontWeight: "800",
     },
     categoryChipText: {
       fontFamily: RoundedFontFamily,
@@ -174,5 +211,13 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     targetAmount: {
       color: "#CE4C4C",
+    },
+    deadlineText: {
+      marginTop: 6,
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardSubtleText,
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: "700",
     },
   });

@@ -1,7 +1,10 @@
 import { BadgeList } from "@/components/profile/badge-list";
+import { ProfilePhotoUploader } from "@/components/profile/profile-photo-uploader";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { SettingsItem } from "@/components/profile/settings-item";
 import { DashboardBottomNavbar } from "@/components/navigation/dashboard-bottom-navbar";
+import { AppToast } from "@/components/ui/app-toast";
+import { ERROR_MESSAGES } from "@/constants/error-messages";
 import { Colors, RoundedFontFamily } from "@/constants/theme";
 import {
   PROFILE_BADGES,
@@ -10,9 +13,10 @@ import {
 import type { ProfileSettingsKey } from "@/features/profile/profile.types";
 import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { authStorage } from "@/services/auth/auth.storage";
+import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/services/api/api-error";
+import { userService } from "@/services/user/user.service";
 import { userStorage } from "@/services/user/user.storage";
-import type { AuthSession } from "@/types/auth";
 import type { UserProfile } from "@/types/user";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -48,14 +52,15 @@ const resolveNonEmptyText = (value: unknown) => {
   return trimmedValue.length > 0 ? trimmedValue : null;
 };
 
-const resolveAvatarSource = (
+const resolveProfilePictureUri = (
   user: Record<string, unknown> | null | undefined,
-): ImageSourcePropType | null => {
+) => {
   if (!user) {
     return null;
   }
 
   const avatarUriCandidates = [
+    user.profilePicture,
     user.avatar,
     user.avatarUrl,
     user.profileImage,
@@ -67,25 +72,44 @@ const resolveAvatarSource = (
     const resolvedUri = resolveNonEmptyText(candidate);
 
     if (resolvedUri) {
-      return { uri: resolvedUri };
+      return resolvedUri;
     }
   }
 
   return null;
 };
 
+const resolveAvatarSource = (
+  profilePictureUri: string | null,
+  user: Record<string, unknown> | null | undefined,
+): ImageSourcePropType | null => {
+  if (profilePictureUri) {
+    return { uri: profilePictureUri };
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const resolvedUri = resolveProfilePictureUri(user);
+
+  return resolvedUri ? { uri: resolvedUri } : null;
+};
+
 export default function ProfileScreen() {
   const router = useRouter();
-  const { session, signOut } = useAuth();
+  const { session, signOut, updateSessionUser } = useAuth();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
+  const { hideToast, showToast, toast } = useToast();
   const { width } = useWindowDimensions();
   const contentWidth = Math.min(width, MAX_CONTENT_WIDTH);
   const styles = useMemo(
     () => createStyles(colors, contentWidth),
     [colors, contentWidth],
   );
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isEditNameModalVisible, setIsEditNameModalVisible] = useState(false);
 
@@ -102,6 +126,10 @@ export default function ProfileScreen() {
     () => resolveNonEmptyText(userRecord?.lastName) ?? "",
     [userRecord?.lastName],
   );
+  const initialProfilePicture = useMemo(
+    () => resolveProfilePictureUri(userRecord) ?? null,
+    [userRecord],
+  );
   const fallbackName = useMemo(
     () => resolveNonEmptyText(userRecord?.name),
     [userRecord?.name],
@@ -109,9 +137,15 @@ export default function ProfileScreen() {
   const [firstName, setFirstName] = useState(initialFirstName);
   const [middleName, setMiddleName] = useState(initialMiddleName);
   const [lastName, setLastName] = useState(initialLastName);
+  const [profilePictureUri, setProfilePictureUri] = useState<string | null>(
+    initialProfilePicture,
+  );
   const [draftFirstName, setDraftFirstName] = useState("");
   const [draftMiddleName, setDraftMiddleName] = useState("");
   const [draftLastName, setDraftLastName] = useState("");
+  const [draftProfilePictureUri, setDraftProfilePictureUri] = useState<
+    string | null
+  >(initialProfilePicture);
 
   const fullName = useMemo(() => {
     const combinedName = [firstName, middleName, lastName]
@@ -125,13 +159,18 @@ export default function ProfileScreen() {
     () => resolveNonEmptyText(userRecord?.email) ?? "user@pawtner.app",
     [userRecord?.email],
   );
-  const avatarSource = useMemo(() => resolveAvatarSource(userRecord), [userRecord]);
+  const avatarSource = useMemo(
+    () => resolveAvatarSource(profilePictureUri, userRecord),
+    [profilePictureUri, userRecord],
+  );
 
   useEffect(() => {
     setFirstName(initialFirstName);
     setMiddleName(initialMiddleName);
     setLastName(initialLastName);
-  }, [initialFirstName, initialLastName, initialMiddleName]);
+    setProfilePictureUri(initialProfilePicture);
+    setDraftProfilePictureUri(initialProfilePicture);
+  }, [initialFirstName, initialLastName, initialMiddleName, initialProfilePicture]);
 
   useEffect(() => {
     const userId = resolveNonEmptyText(userRecord?.id);
@@ -152,6 +191,7 @@ export default function ProfileScreen() {
       setFirstName(resolveNonEmptyText(cachedProfile.firstName) ?? "");
       setMiddleName(resolveNonEmptyText(cachedProfile.middleName) ?? "");
       setLastName(resolveNonEmptyText(cachedProfile.lastName) ?? "");
+      setProfilePictureUri(resolveNonEmptyText(cachedProfile.profilePicture) ?? null);
     };
 
     void hydrateCachedName();
@@ -180,10 +220,100 @@ export default function ProfileScreen() {
     // TODO: connect add badge flow when profile badge management screen is available.
   };
 
+  const persistProfileDetails = async ({
+    nextFirstName,
+    nextLastName,
+    nextMiddleName,
+    nextProfilePictureUri,
+    successMessage = "Profile updated.",
+  }: {
+    nextFirstName: string;
+    nextLastName: string;
+    nextMiddleName: string;
+    nextProfilePictureUri: string | null;
+    successMessage?: string;
+  }) => {
+    const userId = resolveNonEmptyText(userRecord?.id);
+    const accessToken = resolveNonEmptyText(session?.accessToken);
+    const currentUserProfile = (session?.user ?? {}) as UserProfile;
+    const resolvedEmail = resolveNonEmptyText(currentUserProfile.email) ?? email;
+
+    if (!userId || !accessToken || !resolvedEmail) {
+      showToast("Unable to update profile right now.", "error");
+      return null;
+    }
+
+    const normalizedRole = resolveNonEmptyText(currentUserProfile.role);
+    const resolvedRole = normalizedRole?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER";
+
+    setIsSavingProfile(true);
+
+    try {
+      const updatedProfile = await userService.updateUser({
+        payload: {
+          email: resolvedEmail,
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          middleName: nextMiddleName || null,
+          profilePicture: nextProfilePictureUri,
+          role: resolvedRole,
+        },
+        token: accessToken,
+        userId,
+      });
+
+      const normalizedFirstName =
+        resolveNonEmptyText(updatedProfile.firstName) ?? nextFirstName;
+      const normalizedMiddleName =
+        resolveNonEmptyText(updatedProfile.middleName) ?? nextMiddleName;
+      const normalizedLastName =
+        resolveNonEmptyText(updatedProfile.lastName) ?? nextLastName;
+      const normalizedProfilePicture =
+        resolveNonEmptyText(updatedProfile.profilePicture) ?? nextProfilePictureUri;
+      const normalizedFullName =
+        [normalizedFirstName, normalizedMiddleName, normalizedLastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
+        fallbackName ||
+        "Pawtner User";
+
+      const nextUserProfile: UserProfile = {
+        ...currentUserProfile,
+        ...updatedProfile,
+        email: resolveNonEmptyText(updatedProfile.email) ?? resolvedEmail,
+        firstName: normalizedFirstName,
+        id: userId,
+        lastName: normalizedLastName,
+        middleName: normalizedMiddleName || null,
+        name: normalizedFullName,
+        profilePicture: normalizedProfilePicture,
+        role: resolveNonEmptyText(updatedProfile.role) ?? resolvedRole,
+      };
+
+      setFirstName(normalizedFirstName);
+      setMiddleName(normalizedMiddleName);
+      setLastName(normalizedLastName);
+      setProfilePictureUri(normalizedProfilePicture);
+      await updateSessionUser(nextUserProfile);
+      showToast(successMessage);
+      return nextUserProfile;
+    } catch (error) {
+      showToast(
+        getErrorMessage(error, "Unable to save profile changes."),
+        "error",
+      );
+      return null;
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const handleOpenEditProfileNames = () => {
     setDraftFirstName(firstName);
     setDraftMiddleName(middleName);
     setDraftLastName(lastName);
+    setDraftProfilePictureUri(profilePictureUri);
     setIsEditNameModalVisible(true);
   };
 
@@ -191,54 +321,45 @@ export default function ProfileScreen() {
     setDraftFirstName("");
     setDraftMiddleName("");
     setDraftLastName("");
+    setDraftProfilePictureUri(profilePictureUri);
     setIsEditNameModalVisible(false);
   };
 
   const handleSaveProfileNames = () => {
+    if (isSavingProfile) {
+      return;
+    }
+
     const nextFirstName = normalizeNameValue(draftFirstName);
     const nextMiddleName = normalizeNameValue(draftMiddleName);
     const nextLastName = normalizeNameValue(draftLastName);
-    const nextFullName = [nextFirstName, nextMiddleName, nextLastName]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
 
-    setFirstName(nextFirstName);
-    setMiddleName(nextMiddleName);
-    setLastName(nextLastName);
-    setIsEditNameModalVisible(false);
-
-    const userId = resolveNonEmptyText(userRecord?.id);
-
-    if (!userId) {
+    if (!nextFirstName) {
+      showToast(ERROR_MESSAGES.firstNameRequired, "error");
       return;
     }
 
-    const currentUserProfile = (session?.user ?? {}) as UserProfile;
-    const nextUserProfile: UserProfile = {
-      ...currentUserProfile,
-      id: userId,
-      firstName: nextFirstName,
-      middleName: nextMiddleName || null,
-      lastName: nextLastName,
-      name: nextFullName || fallbackName || "Pawtner User",
-    };
-
-    void userStorage.setUserProfile(nextUserProfile);
-
-    if (!session) {
+    if (!nextLastName) {
+      showToast(ERROR_MESSAGES.lastNameRequired, "error");
       return;
     }
 
-    const nextSession: AuthSession = {
-      ...session,
-      user: {
-        ...session.user,
-        ...nextUserProfile,
-      },
-    };
+    void persistProfileDetails({
+      nextFirstName,
+      nextLastName,
+      nextMiddleName,
+      nextProfilePictureUri: draftProfilePictureUri,
+    }).then((result) => {
+      if (!result) {
+        return;
+      }
 
-    void authStorage.setSession(nextSession);
+      setIsEditNameModalVisible(false);
+      setDraftFirstName("");
+      setDraftMiddleName("");
+      setDraftLastName("");
+      setDraftProfilePictureUri(resolveNonEmptyText(result.profilePicture) ?? null);
+    });
   };
 
   const handlePressSetting = (settingKey: ProfileSettingsKey) => {
@@ -256,6 +377,7 @@ export default function ProfileScreen() {
         barStyle="light-content"
         backgroundColor={colors.loginHeaderGradientEnd}
       />
+      <AppToast onDismiss={hideToast} toast={toast} />
 
       <LinearGradient
         colors={[
@@ -353,6 +475,22 @@ export default function ProfileScreen() {
             >
               <Text style={styles.modalTitle}>Edit Profile Name</Text>
 
+              <ProfilePhotoUploader
+                disabled={isSavingProfile}
+                onChangePhoto={(selectedPhotoUri) => {
+                  setDraftProfilePictureUri(selectedPhotoUri);
+
+                  if (selectedPhotoUri) {
+                    showToast("Profile photo ready to save.");
+                    return;
+                  }
+
+                  showToast("Profile photo cleared.");
+                }}
+                onError={(message) => showToast(message, "error")}
+                photoUri={draftProfilePictureUri}
+              />
+
               <View style={styles.modalInputGroup}>
                 <Text style={styles.modalInputLabel}>First Name</Text>
                 <TextInput
@@ -406,13 +544,17 @@ export default function ProfileScreen() {
 
                 <Pressable
                   accessibilityRole="button"
+                  disabled={isSavingProfile}
                   onPress={handleSaveProfileNames}
                   style={({ pressed }) => [
                     styles.modalSaveButton,
-                    pressed && styles.pressed,
+                    isSavingProfile && styles.modalSaveButtonDisabled,
+                    pressed && !isSavingProfile && styles.pressed,
                   ]}
                 >
-                  <Text style={styles.modalSaveButtonText}>Save</Text>
+                  <Text style={styles.modalSaveButtonText}>
+                    {isSavingProfile ? "Saving..." : "Save"}
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -572,6 +714,9 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       backgroundColor: colors.dashboardBottomBarBackground,
       alignItems: "center",
       justifyContent: "center",
+    },
+    modalSaveButtonDisabled: {
+      opacity: 0.7,
     },
     modalCancelButtonText: {
       fontFamily: RoundedFontFamily,

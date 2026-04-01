@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type ToastVariant = "error" | "success";
 
@@ -22,11 +22,16 @@ export const useToast = (durationMs = 2800) => {
     return () => clearTimeout(timeoutId);
   }, [durationMs, toast]);
 
-  const hideToast = () => setToast(null);
+  const hideToast = useCallback(() => {
+    setToast(null);
+  }, []);
 
-  const showToast = (message: string, variant: ToastVariant = "success") => {
-    setToast({ message, variant });
-  };
+  const showToast = useCallback(
+    (message: string, variant: ToastVariant = "success") => {
+      setToast({ message, variant });
+    },
+    [],
+  );
 
   return {
     hideToast,

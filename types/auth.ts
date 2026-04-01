@@ -38,6 +38,7 @@ export type ResetPasswordPayload = {
   confirmPassword: string;
   email: string;
   newPassword: string;
+  otp: string;
 };
 
 export type ApiMessageResponse = {
@@ -63,4 +64,5 @@ export interface AuthContextValue {
   signIn: (payload: LoginPayload) => Promise<AuthSession>;
   signOut: () => Promise<void>;
   signUp: (payload: SignUpPayload) => Promise<void>;
+  updateSessionUser: (user: AuthUser) => Promise<void>;
 }

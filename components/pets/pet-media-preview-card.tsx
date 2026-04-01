@@ -1,74 +1,136 @@
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { WebView } from "react-native-webview";
 
 type PetMediaPreviewCardProps = {
-  onPress?: () => void;
+  videoUrl?: string;
 };
 
-export function PetMediaPreviewCard({ onPress }: PetMediaPreviewCardProps) {
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const toCloudinaryMp4Url = (url: string) => {
+  if (!/res\.cloudinary\.com/i.test(url)) {
+    return null;
+  }
+
+  if (!/\/video\/upload\//i.test(url)) {
+    return null;
+  }
+
+  const withFormatTransform = url.replace(/\/video\/upload\//i, "/video/upload/f_mp4/");
+
+  return withFormatTransform.replace(/\.(webm|mov|mkv)(\?.*)?$/i, ".mp4$2");
+};
+
+const buildVideoHtml = (videoUrl: string) => {
+  const normalizedVideoUrl = videoUrl.trim();
+  const cloudinaryMp4Url = toCloudinaryMp4Url(normalizedVideoUrl);
+  const primarySource = cloudinaryMp4Url ?? normalizedVideoUrl;
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #0f1f33;
+        overflow: hidden;
+      }
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        background: #0f1f33;
+      }
+    </style>
+  </head>
+  <body>
+    <video controls playsinline preload="metadata">
+      <source src="${escapeHtml(primarySource)}" type="video/mp4" />
+      <source src="${escapeHtml(normalizedVideoUrl)}" type="video/webm" />
+      <source src="${escapeHtml(normalizedVideoUrl)}" />
+    </video>
+  </body>
+</html>`;
+};
+
+export function PetMediaPreviewCard({ videoUrl }: PetMediaPreviewCardProps) {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const normalizedVideoUrl = videoUrl?.trim();
+  const hasVideo = Boolean(normalizedVideoUrl);
+  const videoHtml = normalizedVideoUrl ? buildVideoHtml(normalizedVideoUrl) : "";
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-    >
-      <View style={styles.playWrap}>
-        <View style={styles.playGlyphContainer}>
-          <View style={styles.playGlyph} />
+    <View style={styles.card}>
+      {hasVideo ? (
+        <View style={styles.playerWrap}>
+          <WebView
+            allowsFullscreenVideo
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            originWhitelist={["*"]}
+            scrollEnabled={false}
+            source={{ html: videoHtml }}
+            style={styles.player}
+          />
         </View>
-      </View>
-    </Pressable>
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No video URL</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
 const createStyles = (colors: typeof Colors.light) =>
   StyleSheet.create({
     card: {
-      width: "47.5%",
-      aspectRatio: 1.35,
+      width: "100%",
       borderRadius: 20,
       backgroundColor: colors.petDetailsSurface,
-      alignItems: "center",
-      justifyContent: "center",
+      overflow: "hidden",
       shadowColor: colors.dashboardShadow,
       shadowOffset: { width: 0, height: 5 },
       shadowOpacity: 0.2,
       shadowRadius: 8,
       elevation: 5,
-      paddingBottom: 15,
     },
-    playWrap: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      borderWidth: 2,
-      borderColor: colors.petDetailsOutline,
+    playerWrap: {
+      width: "100%",
+      aspectRatio: 3 / 4,
+      backgroundColor: "#0f1f33",
+    },
+    player: {
+      flex: 1,
+      backgroundColor: "#0f1f33",
+    },
+    emptyState: {
+      width: "100%",
+      minHeight: 132,
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: "rgba(9, 28, 51, 0.2)",
     },
-    playGlyphContainer: {
-      position: "absolute",
-      top: "50%",
-      left: "50%",
-      transform: [{ translateX: -5 }, { translateY: -11 }],
-    },
-    playGlyph: {
-      width: 0,
-      height: 0,
-      borderTopWidth: 10,
-      borderBottomWidth: 10,
-      borderLeftWidth: 16,
-      borderTopColor: "transparent",
-      borderBottomColor: "transparent",
-      borderLeftColor: colors.petDetailsOutline,
-    },
-    cardPressed: {
-      opacity: 0.9,
+    emptyText: {
+      color: colors.petDetailsTextSecondary,
+      fontSize: 13,
+      lineHeight: 16,
+      fontWeight: "700",
     },
   });

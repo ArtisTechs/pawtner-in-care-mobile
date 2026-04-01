@@ -35,7 +35,52 @@ export function PetDetailsBottomSheet({
     () => pet.media.filter((item) => item.type === "video"),
     [pet.media],
   );
+  const detailsUnderVaccinated = useMemo(() => {
+    const items: string[] = [];
+
+    if (pet.adoptionDate?.trim()) {
+      items.push(`Adoption: ${pet.adoptionDate}`);
+    }
+
+    if (pet.rescuedDate?.trim()) {
+      items.push(`Rescued: ${pet.rescuedDate}`);
+    }
+
+    if (pet.birthDate?.trim()) {
+      items.push(`Birth: ${pet.birthDate}`);
+    }
+
+    if (pet.breed?.trim()) {
+      items.push(`Breed: ${pet.breed}`);
+    }
+
+    if (pet.status?.trim()) {
+      items.push(`Status: ${pet.status}`);
+    }
+
+    return items;
+  }, [pet.adoptionDate, pet.birthDate, pet.breed, pet.rescuedDate, pet.status]);
+  const attributeItems = useMemo(() => {
+    const items: { label: string; value: string }[] = [
+      { label: "Gender", value: pet.sex },
+    ];
+
+    if (pet.age.trim()) {
+      items.push({ label: "Age", value: pet.age });
+    }
+
+    if (pet.weight.trim()) {
+      items.push({ label: "Weight", value: pet.weight });
+    }
+
+    if (pet.height.trim()) {
+      items.push({ label: "Height", value: pet.height });
+    }
+
+    return items;
+  }, [pet.age, pet.height, pet.sex, pet.weight]);
   const hasFosterInfo = Boolean(pet.fosterName?.trim() && pet.fosterRole?.trim());
+  const hasDescription = pet.description.trim().length > 0;
 
   return (
     <BottomSheet
@@ -64,6 +109,11 @@ export function PetDetailsBottomSheet({
             <Text style={styles.metric}>
               {pet.vaccinated ? "Vaccinated" : "Not Vaccinated"}
             </Text>
+            {detailsUnderVaccinated.length > 0 ? (
+              <Text style={styles.metricDetails}>
+                {detailsUnderVaccinated.join(" | ")}
+              </Text>
+            ) : null}
           </View>
 
           <Pressable
@@ -84,10 +134,13 @@ export function PetDetailsBottomSheet({
         </View>
 
         <View style={styles.attributesRow}>
-          <PetDetailAttributeCard label="Gender" value={pet.sex} />
-          <PetDetailAttributeCard label="Age" value={pet.age} />
-          <PetDetailAttributeCard label="Weight" value={pet.weight} />
-          <PetDetailAttributeCard label="Height" value={pet.height} />
+          {attributeItems.map((item) => (
+            <PetDetailAttributeCard
+              key={item.label}
+              label={item.label}
+              value={item.value}
+            />
+          ))}
         </View>
 
         {hasFosterInfo ? (
@@ -107,18 +160,30 @@ export function PetDetailsBottomSheet({
           </View>
         )}
 
-        <Text style={styles.description}>{pet.description}</Text>
+        {hasDescription ? (
+          <Text style={styles.description}>{pet.description}</Text>
+        ) : null}
 
-        <Text style={styles.mediaTitle}>Videos</Text>
+        <Text
+          style={[
+            styles.mediaTitle,
+            !hasDescription && styles.mediaTitleCompactTopSpacing,
+          ]}
+        >
+          Video
+        </Text>
 
         {videoItems.length > 0 ? (
-          <View style={styles.mediaGrid}>
+          <View style={styles.mediaList}>
             {videoItems.map((item) => (
-              <PetMediaPreviewCard key={item.id} />
+              <PetMediaPreviewCard
+                key={item.id}
+                videoUrl={item.videoUrl}
+              />
             ))}
           </View>
         ) : (
-          <Text style={styles.noMediaText}>No videos</Text>
+          <Text style={styles.noMediaText}>No video</Text>
         )}
       </BottomSheetScrollView>
     </BottomSheet>
@@ -175,6 +240,14 @@ const createStyles = (colors: typeof Colors.light) =>
       fontSize: 14,
       lineHeight: 20,
       fontWeight: "700",
+    },
+    metricDetails: {
+      marginTop: 2,
+      fontFamily: RoundedFontFamily,
+      color: colors.petDetailsTextSecondary,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: "600",
     },
     favoriteButton: {
       width: 48,
@@ -239,11 +312,11 @@ const createStyles = (colors: typeof Colors.light) =>
       lineHeight: 22,
       fontWeight: "800",
     },
-    mediaGrid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      justifyContent: "space-between",
-      rowGap: 16,
+    mediaTitleCompactTopSpacing: {
+      marginTop: 16,
+    },
+    mediaList: {
+      rowGap: 12,
     },
     noMediaText: {
       fontFamily: RoundedFontFamily,

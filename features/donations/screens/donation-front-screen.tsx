@@ -1,9 +1,11 @@
 import { DonationHomeHeroCard } from "@/components/donations/donation-home-hero-card";
 import { DonationHomeMiniCard } from "@/components/donations/donation-home-mini-card";
+import { AppToast } from "@/components/ui/app-toast";
 import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   DONATION_ASSETS,
-  getDonationCauses,
+  fetchDonationCauses,
+  isDonationCampaignDonatable,
   selectFundStraysCauses,
   selectUrgentFundraisingCauses,
 } from "@/features/donations/donations.data";
@@ -11,9 +13,12 @@ import type {
   DonationCauseItem,
   DonationFilter,
 } from "@/features/donations/donations.types";
+import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/services/api/api-error";
 import { useRouter } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -31,16 +36,21 @@ const MAX_CONTENT_WIDTH = 420;
 
 export default function DonationFrontScreen() {
   const router = useRouter();
+  const { isHydrating, session } = useAuth();
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { hideToast, showToast, toast } = useToast();
   const contentWidth = Math.min(width, MAX_CONTENT_WIDTH);
   const urgentCardWidth = Math.min(
     Math.max(292, contentWidth - 54),
     contentWidth - 24,
   );
-  const allDonationCauses = useMemo(() => getDonationCauses(), []);
+  const [allDonationCauses, setAllDonationCauses] = useState<DonationCauseItem[]>(
+    [],
+  );
+  const [isCampaignLoading, setIsCampaignLoading] = useState(true);
   const urgentCauses = useMemo(
     () => selectUrgentFundraisingCauses(allDonationCauses),
     [allDonationCauses],
@@ -53,6 +63,59 @@ export default function DonationFrontScreen() {
     () => createStyles(colors, contentWidth, urgentCardWidth),
     [colors, contentWidth, urgentCardWidth],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCampaigns = async () => {
+      if (isHydrating) {
+        if (isMounted) {
+          setIsCampaignLoading(true);
+        }
+        return;
+      }
+
+      if (!session?.accessToken) {
+        if (isMounted) {
+          setAllDonationCauses([]);
+          setIsCampaignLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsCampaignLoading(true);
+      }
+
+      try {
+        const campaigns = await fetchDonationCauses(session.accessToken);
+
+        if (isMounted) {
+          setAllDonationCauses(campaigns);
+        }
+      } catch (error) {
+        console.error("[donation-front] Failed to load campaigns", error);
+
+        if (isMounted) {
+          setAllDonationCauses([]);
+          showToast(
+            getErrorMessage(error, "Unable to load donation campaigns."),
+            "error",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsCampaignLoading(false);
+        }
+      }
+    };
+
+    void loadCampaigns();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isHydrating, session?.accessToken, showToast]);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -76,6 +139,11 @@ export default function DonationFrontScreen() {
   };
 
   const handleOpenPayment = (cause: DonationCauseItem) => {
+    if (!isDonationCampaignDonatable(cause)) {
+      showToast("This campaign is no longer accepting donations.", "error");
+      return;
+    }
+
     router.push({
       pathname: "/donations/payment",
       params: {
@@ -96,6 +164,7 @@ export default function DonationFrontScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <AppToast onDismiss={hideToast} toast={toast} />
 
       <View style={styles.contentWrap}>
         <View
@@ -151,23 +220,33 @@ export default function DonationFrontScreen() {
               Urgent Fundraising
             </Text>
 
-            <FlatList
-              horizontal
-              data={urgentCauses}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <DonationHomeHeroCard
-                  item={item}
-                  onPress={handlePressUrgentCause}
-                  style={styles.urgentCard}
-                />
-              )}
-              ItemSeparatorComponent={() => (
-                <View style={styles.urgentCardGap} />
-              )}
-              contentContainerStyle={styles.urgentListContent}
-              showsHorizontalScrollIndicator={false}
-            />
+            {isCampaignLoading ? (
+              <Text style={[styles.sectionHintText, styles.sectionTitlePadded]}>
+                Loading campaigns...
+              </Text>
+            ) : urgentCauses.length > 0 ? (
+              <FlatList
+                horizontal
+                data={urgentCauses}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <DonationHomeHeroCard
+                    item={item}
+                    onPress={handlePressUrgentCause}
+                    style={styles.urgentCard}
+                  />
+                )}
+                ItemSeparatorComponent={() => (
+                  <View style={styles.urgentCardGap} />
+                )}
+                contentContainerStyle={styles.urgentListContent}
+                showsHorizontalScrollIndicator={false}
+              />
+            ) : (
+              <Text style={[styles.sectionHintText, styles.sectionTitlePadded]}>
+                No urgent campaigns right now.
+              </Text>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -183,20 +262,30 @@ export default function DonationFrontScreen() {
               </Pressable>
             </View>
 
-            <FlatList
-              horizontal
-              data={fundStraysCauses}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <DonationHomeMiniCard
-                  item={item}
-                  onPress={handlePressFundStraysCause}
-                />
-              )}
-              ItemSeparatorComponent={() => <View style={styles.miniCardGap} />}
-              contentContainerStyle={styles.miniListContent}
-              showsHorizontalScrollIndicator={false}
-            />
+            {isCampaignLoading ? (
+              <Text style={[styles.sectionHintText, styles.sectionTitlePadded]}>
+                Loading campaigns...
+              </Text>
+            ) : fundStraysCauses.length > 0 ? (
+              <FlatList
+                horizontal
+                data={fundStraysCauses}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <DonationHomeMiniCard
+                    item={item}
+                    onPress={handlePressFundStraysCause}
+                  />
+                )}
+                ItemSeparatorComponent={() => <View style={styles.miniCardGap} />}
+                contentContainerStyle={styles.miniListContent}
+                showsHorizontalScrollIndicator={false}
+              />
+            ) : (
+              <Text style={[styles.sectionHintText, styles.sectionTitlePadded]}>
+                No available campaigns in this section.
+              </Text>
+            )}
           </View>
         </ScrollView>
       </View>
@@ -329,6 +418,14 @@ const createStyles = (
     },
     miniCardGap: {
       width: 12,
+    },
+    sectionHintText: {
+      ...roundedText,
+      marginTop: 14,
+      color: colors.dashboardSubtleText,
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: "700",
     },
   });
 };

@@ -55,9 +55,11 @@ export function PetDetailsActionBar({
 
         <Pressable
           accessibilityRole="button"
+          disabled={!onAdoptPress}
           onPress={onAdoptPress}
           style={({ pressed }) => [
             styles.adoptButton,
+            !onAdoptPress && styles.adoptButtonDisabled,
             pressed && styles.adoptButtonPressed,
           ]}
         >
@@ -115,6 +117,9 @@ const createStyles = (colors: typeof Colors.light) =>
     },
     adoptButtonPressed: {
       opacity: 0.9,
+    },
+    adoptButtonDisabled: {
+      opacity: 0.55,
     },
     adoptText: {
       fontFamily: RoundedFontFamily,

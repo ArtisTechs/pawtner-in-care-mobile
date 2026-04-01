@@ -1,6 +1,13 @@
 import { DonationProgressBar } from "@/components/donations/donation-progress-bar";
 import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
-import { DONATION_ASSETS } from "@/features/donations/donations.data";
+import {
+  DONATION_ASSETS,
+  formatDonationAmount,
+  formatDonationCampaignStatus,
+  formatDonationCampaignType,
+  getDonationProgress,
+  isDonationCampaignDonatable,
+} from "@/features/donations/donations.data";
 import type { DonationCauseItem } from "@/features/donations/donations.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import React, { useMemo } from "react";
@@ -34,18 +41,20 @@ const resolveCauseImage = (image?: DonationCauseItem["image"]) => {
   return image;
 };
 
-const formatAmount = (amount: number) => `\u20b1 ${amount.toLocaleString("en-PH")}`;
-
 export function DonationCard({ item, onPressAction, style }: DonationCardProps) {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const styles = useMemo(() => createStyles(colors), [colors]);
   const imageSource = resolveCauseImage(item.image);
-  const progress = item.targetAmount > 0 ? item.raisedAmount / item.targetAmount : 0;
+  const progress = getDonationProgress(item);
+  const isDonateEnabled = isDonationCampaignDonatable(item);
+  const campaignTypeLabel = formatDonationCampaignType(item.type);
+  const campaignStatusLabel = formatDonationCampaignStatus(item.status);
 
   return (
     <Pressable
       accessibilityRole="button"
+      disabled={!onPressAction || !isDonateEnabled}
       onPress={() => onPressAction?.(item)}
       style={({ pressed }) => [
         styles.card,
@@ -59,6 +68,11 @@ export function DonationCard({ item, onPressAction, style }: DonationCardProps) 
       <Image source={imageSource} style={styles.thumbnail} resizeMode="cover" />
 
       <View style={styles.content}>
+        <View style={styles.metaBadgeRow}>
+          <Text style={styles.typeBadge}>{campaignTypeLabel}</Text>
+          <Text style={styles.statusBadge}>{campaignStatusLabel}</Text>
+        </View>
+
         <Text numberOfLines={2} style={styles.title}>
           {item.title}
         </Text>
@@ -69,17 +83,23 @@ export function DonationCard({ item, onPressAction, style }: DonationCardProps) 
 
         <View style={styles.footerRow}>
           <Text style={styles.amount}>
-            <Text style={styles.raisedAmount}>{formatAmount(item.raisedAmount)}</Text>
+            <Text style={styles.raisedAmount}>
+              {formatDonationAmount(item.totalDonatedCost)}
+            </Text>
             <Text style={styles.amountDivider}> / </Text>
-            <Text style={styles.targetAmount}>{formatAmount(item.targetAmount)}</Text>
+            <Text style={styles.targetAmount}>
+              {formatDonationAmount(item.totalCost)}
+            </Text>
           </Text>
 
           <Pressable
             accessibilityRole="button"
+            disabled={!isDonateEnabled || !onPressAction}
             hitSlop={8}
             onPress={() => onPressAction?.(item)}
             style={({ pressed }) => [
               styles.actionButton,
+              !isDonateEnabled && styles.actionButtonDisabled,
               pressed && styles.actionPressed,
             ]}
           >
@@ -128,7 +148,37 @@ const createStyles = (colors: typeof Colors.light) =>
       paddingVertical: 4,
       paddingRight: 4,
     },
+    metaBadgeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    typeBadge: {
+      fontFamily: RoundedFontFamily,
+      fontSize: 8,
+      lineHeight: 13,
+      fontWeight: "800",
+      color: colors.dashboardBottomIcon,
+      backgroundColor: "rgba(156, 196, 236, 0.34)",
+      borderRadius: 999,
+      overflow: "hidden",
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    statusBadge: {
+      fontFamily: RoundedFontFamily,
+      fontSize: 8,
+      lineHeight: 13,
+      fontWeight: "800",
+      color: colors.dashboardBottomIcon,
+      backgroundColor: "rgba(255, 255, 255, 0.62)",
+      borderRadius: 999,
+      overflow: "hidden",
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
     title: {
+      marginTop: 4,
       fontFamily: DisplayFontFamily,
       color: colors.dashboardBottomIconActive,
       fontSize: 16,
@@ -169,6 +219,9 @@ const createStyles = (colors: typeof Colors.light) =>
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "#EAF2FD",
+    },
+    actionButtonDisabled: {
+      opacity: 0.45,
     },
     actionIcon: {
       width: 20,

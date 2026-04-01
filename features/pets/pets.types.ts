@@ -17,12 +17,30 @@ export type PetListingItem = {
   isFavorite?: boolean;
 };
 
+export type PetListingPagination = {
+  first: boolean;
+  ignorePagination: boolean;
+  last: boolean;
+  page: number;
+  size: number;
+  sortBy?: string;
+  sortDirection?: string;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type PetListingPage = {
+  items: PetListingItem[];
+  pagination: PetListingPagination;
+};
+
 export type PetMediaType = "photo" | "video";
 
 export type PetMediaItem = {
   id: string;
   type: PetMediaType;
   thumbnail?: ImageSourcePropType | string;
+  videoUrl?: string;
 };
 
 export type PetDetailsItem = {
@@ -34,6 +52,11 @@ export type PetDetailsItem = {
   age: string;
   weight: string;
   height: string;
+  adoptionDate?: string;
+  birthDate?: string;
+  rescuedDate?: string;
+  breed?: string;
+  status?: string;
   distance: string;
   location: string;
   description: string;

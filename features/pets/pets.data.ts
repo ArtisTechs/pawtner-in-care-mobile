@@ -1,7 +1,21 @@
+import { petService } from "@/services/pets/pet.service";
+import { ApiError } from "@/services/api/api-error";
+import type {
+  AdoptionRequestApiItem,
+  PetAdoptedByUser,
+  PetApiItem,
+  PetPagination,
+  PetSortDirection,
+} from "@/types/pet";
+
 import type {
   PetDetailsItem,
   PetFilter,
+  PetListingPage,
   PetListingItem,
+  PetListingPagination,
+  PetMediaItem,
+  PetType,
 } from "@/features/pets/pets.types";
 
 type PetFilterOption = {
@@ -9,7 +23,44 @@ type PetFilterOption = {
   label: string;
 };
 
+type PetAuthParams = {
+  token: string;
+  userId: string;
+};
+
+type FetchPetDetailsParams = PetAuthParams & {
+  petId: string;
+};
+
+type SetPetFavoriteParams = PetAuthParams & {
+  favorited: boolean;
+  petId: string;
+};
+
+type CreatePetAdoptionRequestParams = PetAuthParams & {
+  petId: string;
+  message?: string;
+};
+
+type CancelPendingPetAdoptionRequestParams = PetAuthParams & {
+  petId: string;
+  reviewNotes?: string;
+};
+
+type FetchPetListingPageParams = PetAuthParams & {
+  ignorePagination?: boolean;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDirection?: PetSortDirection;
+};
+
+const FALLBACK_PET_LOCATION = "Unknown location";
+const FALLBACK_PET_DISTANCE = "N/A";
+
 export const PET_ASSETS = {
+  adoptPetsIcon: require("../../assets/images/adopt-pets-icon.png"),
+  confirmAdoptPetIcon: require("../../assets/images/confrim-adopt-pet-icon.png"),
   backIcon: require("../../assets/images/back-icon.png"),
   dogDefault: require("../../assets/images/dog.png"),
   catDefault: require("../../assets/images/cat.png"),
@@ -22,195 +73,483 @@ export const PET_FILTER_OPTIONS: PetFilterOption[] = [
   { key: "cats", label: "Cats" },
 ];
 
-const PET_PRELOADED_IMAGE_LINKS = {
-  boxer:
-    "https://images.pexels.com/photos/1805164/pexels-photo-1805164.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2",
-  toller:
-    "https://images.pexels.com/photos/4587996/pexels-photo-4587996.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2",
-  bichon:
-    "https://images.pexels.com/photos/1458916/pexels-photo-1458916.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2",
-  shiba:
-    "https://images.pexels.com/photos/4587971/pexels-photo-4587971.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2",
-  chihuahua:
-    "https://images.pexels.com/photos/1490908/pexels-photo-1490908.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2",
-  shortHairCat:
-    "https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2",
-  persian:
-    "https://images.pexels.com/photos/617278/pexels-photo-617278.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2",
-} as const;
+const normalizeType = (type?: string | null): PetType =>
+  type?.trim().toLowerCase() === "cat" ? "cat" : "dog";
 
-export const PET_LISTING_MOCK_DATA: PetListingItem[] = [
-  {
-    id: "pet-1",
-    name: "Bruno",
-    type: "dog",
-    breed: "Boxer",
-    sex: "Male",
-    age: "1 year old",
-    vaccinated: true,
-    location: "Arayat, Pampanga",
-    image: PET_PRELOADED_IMAGE_LINKS.boxer,
-    isFavorite: false,
-  },
-  {
-    id: "pet-2",
-    name: "Bruno",
-    type: "dog",
-    breed: "Nova Scotia Duck Tolling Retriever",
-    sex: "Male",
-    age: "1 year old",
-    vaccinated: false,
-    location: "Arayat, Pampanga",
-    image: PET_PRELOADED_IMAGE_LINKS.toller,
-    isFavorite: true,
-  },
-  {
-    id: "pet-3",
-    name: "Snow",
-    type: "dog",
-    breed: "Bichon Frise",
-    sex: "Female",
-    age: "8 months old",
-    vaccinated: false,
-    location: "Arayat, Pampanga",
-    image: PET_PRELOADED_IMAGE_LINKS.bichon,
-    isFavorite: false,
-  },
-  {
-    id: "pet-4",
-    name: "Yuki",
-    type: "dog",
-    breed: "Shiba Inu",
-    sex: "Male",
-    age: "1 year old",
-    vaccinated: false,
-    location: "Arayat, Pampanga",
-    image: PET_PRELOADED_IMAGE_LINKS.shiba,
-    isFavorite: true,
-  },
-  {
-    id: "pet-5",
-    name: "Chico",
-    type: "dog",
-    breed: "Chihuahua",
-    sex: "Male",
-    age: "1 year old",
-    vaccinated: false,
-    location: "Arayat, Pampanga",
-    image: PET_PRELOADED_IMAGE_LINKS.chihuahua,
-    isFavorite: false,
-  },
-  {
-    id: "pet-6",
-    name: "Milo",
-    type: "cat",
-    breed: "Domestic Shorthair",
-    sex: "Male",
-    age: "11 months old",
-    vaccinated: true,
-    location: "Arayat, Pampanga",
-    image: PET_PRELOADED_IMAGE_LINKS.shortHairCat,
-    isFavorite: false,
-  },
-  {
-    id: "pet-7",
-    name: "Luna",
-    type: "cat",
-    breed: "Persian",
-    sex: "Female",
-    age: "2 years old",
-    vaccinated: true,
-    location: "Angeles, Pampanga",
-    image: PET_PRELOADED_IMAGE_LINKS.persian,
-    isFavorite: true,
-  },
-];
+const normalizeGender = (gender?: string | null): "Male" | "Female" =>
+  gender?.trim().toLowerCase() === "female" ? "Female" : "Male";
 
-const PET_DETAILS_DESCRIPTION =
-  "Want to add joy and warmth to your family? Meet adorable and cute Bruno! Anyone who saw him would definitely be captivated by his incomparable charm. This adoptable dog is full of joy and affection. His beautiful face with sparkling eyes and a big smile will make your heart melt every time you see him. He has a very well proportioned small to medium build, so it will be easy for you to take him on your daily adventures.";
-
-const PET_DETAILS_FOSTER_AVATAR =
-  "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=180&h=180&dpr=2";
-
-const PET_DETAILS_DEFAULT_MEDIA = [
-  { id: "media-1", type: "video" },
-  { id: "media-2", type: "video" },
-  { id: "media-3", type: "video" },
-] as const;
-
-export const PET_DETAILS_MOCK_DATA: PetDetailsItem[] = [
-  {
-    id: "pet-1",
-    name: "Bruno",
-    type: "dog",
-    sex: "Male",
-    vaccinated: true,
-    age: "2 years",
-    weight: "12 kg",
-    height: "34 in",
-    distance: "40.8 kilometers",
-    location: "In Arayat, Pampanga",
-    description: PET_DETAILS_DESCRIPTION,
-    image: PET_PRELOADED_IMAGE_LINKS.boxer,
-    fosterName: "Jedidiah",
-    fosterRole: "Foster/Adoption Handler",
-    fosterAvatar: PET_DETAILS_FOSTER_AVATAR,
-    media: [...PET_DETAILS_DEFAULT_MEDIA],
-    isFavorite: false,
-  },
-];
-
-const DEFAULT_DISTANCE = "40.8 kilometers";
-const DEFAULT_LOCATION_PREFIX = "In";
-
-const mapListingToPetDetails = (pet: PetListingItem): PetDetailsItem => {
-  const normalizedAge = pet.age.replace(" old", "");
-
-  return {
-    id: pet.id,
-    name: pet.name,
-    type: pet.type,
-    sex: pet.sex,
-    vaccinated: pet.vaccinated,
-    age: normalizedAge,
-    weight: "12 kg",
-    height: "34 in",
-    distance: DEFAULT_DISTANCE,
-    location: `${DEFAULT_LOCATION_PREFIX} ${pet.location}`,
-    description: PET_DETAILS_DESCRIPTION,
-    image: pet.image,
-    media: [...PET_DETAILS_DEFAULT_MEDIA],
-    isFavorite: Boolean(pet.isFavorite),
-  };
+type PetAgeParts = {
+  months: number;
+  years: number;
 };
 
-const PET_DETAILS_BY_ID = new Map(
-  PET_DETAILS_MOCK_DATA.map((pet) => [pet.id, pet] as const),
-);
-const PET_LISTING_BY_ID = new Map(
-  PET_LISTING_MOCK_DATA.map((pet) => [pet.id, pet] as const),
-);
-
-export const getPetDetailsById = (
-  petId: string,
-  favoriteOverride?: boolean,
-): PetDetailsItem | null => {
-  const directMatch = PET_DETAILS_BY_ID.get(petId);
-  const listingMatch = PET_LISTING_BY_ID.get(petId);
-
-  const basePet = directMatch ?? (listingMatch ? mapListingToPetDetails(listingMatch) : null);
-
-  if (!basePet) {
+const resolveAgePartsFromBirthDate = (
+  birthDate?: string | null,
+): PetAgeParts | null => {
+  if (!birthDate) {
     return null;
   }
 
-  if (typeof favoriteOverride === "boolean") {
-    return { ...basePet, isFavorite: favoriteOverride };
+  const birth = new Date(birthDate);
+
+  if (Number.isNaN(birth.getTime())) {
+    return null;
   }
 
-  if (listingMatch && typeof listingMatch.isFavorite === "boolean") {
-    return { ...basePet, isFavorite: listingMatch.isFavorite };
+  const today = new Date();
+
+  if (birth > today) {
+    return {
+      months: 0,
+      years: 0,
+    };
   }
 
-  return basePet;
+  let totalMonths =
+    (today.getFullYear() - birth.getFullYear()) * 12 +
+    (today.getMonth() - birth.getMonth());
+
+  if (today.getDate() < birth.getDate()) {
+    totalMonths -= 1;
+  }
+
+  const normalizedTotalMonths = Math.max(0, totalMonths);
+
+  return {
+    months: normalizedTotalMonths % 12,
+    years: Math.floor(normalizedTotalMonths / 12),
+  };
+};
+
+const resolveAgePartsFromNumericAge = (
+  age?: number | null,
+): PetAgeParts | null => {
+  if (typeof age !== "number" || !Number.isFinite(age)) {
+    return null;
+  }
+
+  const normalizedAge = Math.max(0, age);
+  const totalMonths = Math.max(0, Math.round(normalizedAge * 12));
+
+  return {
+    months: totalMonths % 12,
+    years: Math.floor(totalMonths / 12),
+  };
+};
+
+const resolveAgeParts = (
+  age?: number | null,
+  birthDate?: string | null,
+): PetAgeParts | null =>
+  resolveAgePartsFromBirthDate(birthDate) ?? resolveAgePartsFromNumericAge(age);
+
+const formatAge = (age?: number | null, birthDate?: string | null) => {
+  const ageParts = resolveAgeParts(age, birthDate);
+
+  if (!ageParts) {
+    return undefined;
+  }
+
+  if (ageParts.years <= 0) {
+    if (ageParts.months <= 0) {
+      return "Less than 1 month old";
+    }
+
+    return ageParts.months === 1
+      ? "1 month old"
+      : `${ageParts.months} months old`;
+  }
+
+  return ageParts.years === 1 ? "1 year old" : `${ageParts.years} years old`;
+};
+
+const formatNumber = (value?: number | null): string | null => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+
+  return value.toFixed(2).replace(/\.?0+$/, "");
+};
+
+const formatWeight = (value?: number | null) => {
+  const normalized = formatNumber(value);
+  return normalized ? `${normalized} kg` : undefined;
+};
+
+const formatHeight = (value?: number | null) => {
+  const normalized = formatNumber(value);
+  return normalized ? `${normalized} cm` : undefined;
+};
+
+const normalizeImage = (photo?: string | null) => {
+  const normalized = photo?.trim();
+  return normalized ? normalized : undefined;
+};
+
+const normalizeDescription = (description?: string | null) => {
+  const normalized = description?.trim();
+  return normalized ? normalized : "";
+};
+
+const normalizeOptionalText = (value?: string | null) => {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
+};
+
+const resolveAdoptedByDisplayName = (
+  adoptedBy?: PetAdoptedByUser | string | null,
+) => {
+  if (!adoptedBy) {
+    return undefined;
+  }
+
+  if (typeof adoptedBy === "string") {
+    return normalizeOptionalText(adoptedBy);
+  }
+
+  const nameParts = [
+    normalizeOptionalText(adoptedBy.firstName),
+    normalizeOptionalText(adoptedBy.middleName),
+    normalizeOptionalText(adoptedBy.lastName),
+  ].filter(Boolean);
+  const fullName = nameParts.join(" ").trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  return normalizeOptionalText(adoptedBy.email);
+};
+
+const resolveAdoptedByAvatar = (
+  adoptedBy?: PetAdoptedByUser | string | null,
+) => {
+  if (!adoptedBy || typeof adoptedBy === "string") {
+    return undefined;
+  }
+
+  return normalizeOptionalText(adoptedBy.profilePicture);
+};
+
+const normalizeAdoptionRequestStatus = (status?: string | null) => {
+  const normalized = status?.trim();
+  return normalized ? normalized.toUpperCase() : undefined;
+};
+
+const resolveAdoptionRequestPetId = (adoptionRequest: AdoptionRequestApiItem) => {
+  const directPetId = normalizeOptionalText(adoptionRequest.petId);
+
+  if (directPetId) {
+    return directPetId;
+  }
+
+  const nestedPetId = adoptionRequest.pet?.id;
+
+  return typeof nestedPetId === "string" && nestedPetId.trim()
+    ? nestedPetId.trim()
+    : undefined;
+};
+
+const formatDisplayDate = (value?: string | null) => {
+  const normalized = normalizeOptionalText(value);
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  const parsedDate = new Date(normalized);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return normalized;
+  }
+
+  return parsedDate.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatStatus = (value?: string | null) => {
+  const normalized = normalizeOptionalText(value);
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized
+    .toLowerCase()
+    .split("_")
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
+};
+
+const resolvePetVideoUrl = (pet: PetApiItem) => {
+  const singleVideo = pet.video?.trim();
+
+  if (singleVideo) {
+    return singleVideo;
+  }
+
+  const legacyFirstVideo = pet.videos
+    ?.split(",")
+    .map((value) => value.trim())
+    .find(Boolean);
+
+  return legacyFirstVideo;
+};
+
+const mapVideoToMedia = (pet: PetApiItem): PetMediaItem[] => {
+  const videoUrl = resolvePetVideoUrl(pet);
+
+  if (!videoUrl) {
+    return [];
+  }
+
+  return [
+    {
+      id: `${pet.id}-video-1`,
+      type: "video",
+      videoUrl,
+    },
+  ];
+};
+
+const mapPetToListingItem = (
+  pet: PetApiItem,
+  favoritePetIds: Set<string>,
+): PetListingItem => {
+  const type = normalizeType(pet.type);
+  const normalizedBreed = pet.race?.trim() || (type === "cat" ? "Cat" : "Dog");
+
+  return {
+    age: formatAge(pet.age, pet.birthDate) ?? "",
+    breed: normalizedBreed,
+    id: pet.id,
+    image: normalizeImage(pet.photo),
+    isFavorite: favoritePetIds.has(pet.id),
+    location: FALLBACK_PET_LOCATION,
+    name: pet.name?.trim() || "Unnamed pet",
+    sex: normalizeGender(pet.gender),
+    type,
+    vaccinated: Boolean(pet.isVaccinated),
+  };
+};
+
+const mapPetToDetailsItem = (
+  pet: PetApiItem,
+  favoritePetIds: Set<string>,
+): PetDetailsItem => {
+  const adoptedByName = resolveAdoptedByDisplayName(pet.adoptedBy);
+
+  return {
+    adoptionDate: formatDisplayDate(pet.adoptionDate),
+    age: (formatAge(pet.age, pet.birthDate)?.replace(" old", "") ?? ""),
+    birthDate: formatDisplayDate(pet.birthDate),
+    breed: normalizeOptionalText(pet.race),
+    description: normalizeDescription(pet.description),
+    distance: FALLBACK_PET_DISTANCE,
+    fosterAvatar: resolveAdoptedByAvatar(pet.adoptedBy),
+    fosterName: adoptedByName,
+    fosterRole: adoptedByName ? "Adopted by" : undefined,
+    height: formatHeight(pet.height) ?? "",
+    id: pet.id,
+    image: normalizeImage(pet.photo),
+    isFavorite: favoritePetIds.has(pet.id),
+    location: `In ${FALLBACK_PET_LOCATION}`,
+    media: mapVideoToMedia(pet),
+    name: pet.name?.trim() || "Unnamed pet",
+    rescuedDate: formatDisplayDate(pet.rescuedDate),
+    sex: normalizeGender(pet.gender),
+    status: formatStatus(pet.status),
+    type: normalizeType(pet.type),
+    vaccinated: Boolean(pet.isVaccinated),
+    weight: formatWeight(pet.weight) ?? "",
+  };
+};
+
+const fetchFavoritePets = async ({
+  token,
+  userId,
+}: PetAuthParams): Promise<PetApiItem[]> => {
+  try {
+    return await petService.getUserFavoritePets({ token, userId });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      console.warn(
+        `[pets.data] Favorites fetch skipped due to ${error.status}. Continuing with non-favorite listing.`,
+      );
+      return [];
+    }
+
+    console.warn(
+      "[pets.data] Favorites fetch failed with a non-API error. Continuing with non-favorite listing.",
+      error,
+    );
+    return [];
+  }
+};
+
+const fetchFavoritePetIds = async (params: PetAuthParams): Promise<Set<string>> => {
+  const favorites = await fetchFavoritePets(params);
+  return new Set(favorites.map((pet) => pet.id));
+};
+
+const mergePetSources = (
+  favoritePets: PetApiItem[],
+  listedPets: PetApiItem[],
+): PetApiItem[] => {
+  const petsById = new Map<string, PetApiItem>();
+
+  for (const favoritePet of favoritePets) {
+    petsById.set(favoritePet.id, favoritePet);
+  }
+
+  for (const listedPet of listedPets) {
+    const existingPet = petsById.get(listedPet.id);
+
+    if (!existingPet) {
+      petsById.set(listedPet.id, listedPet);
+      continue;
+    }
+
+    // Keep one entry per pet id while preferring latest listing details.
+    petsById.set(listedPet.id, {
+      ...existingPet,
+      ...listedPet,
+      id: listedPet.id,
+    });
+  }
+
+  return Array.from(petsById.values());
+};
+
+const normalizeListingPagination = (
+  pagination: PetPagination,
+): PetListingPagination => ({
+  first: pagination.first,
+  ignorePagination: pagination.ignorePagination,
+  last: pagination.last,
+  page: pagination.page,
+  size: pagination.size,
+  sortBy: pagination.sortBy,
+  sortDirection: pagination.sortDirection,
+  totalElements: pagination.totalElements,
+  totalPages: pagination.totalPages,
+});
+
+export const fetchPetListingPage = async ({
+  ignorePagination,
+  page,
+  size,
+  sortBy,
+  sortDirection,
+  token,
+  userId,
+}: FetchPetListingPageParams): Promise<PetListingPage> => {
+  const [listedPetsResponse, favoritePets] = await Promise.all([
+    petService.getPets({
+      ignorePagination,
+      page,
+      size,
+      sortBy,
+      sortDirection,
+      token,
+    }),
+    fetchFavoritePets({ token, userId }),
+  ]);
+  const favoritePetIds = new Set(favoritePets.map((pet) => pet.id));
+  const mergedPets = mergePetSources(favoritePets, listedPetsResponse.items);
+
+  return {
+    items: mergedPets.map((pet) => mapPetToListingItem(pet, favoritePetIds)),
+    pagination: normalizeListingPagination(listedPetsResponse.pagination),
+  };
+};
+
+export const fetchPetListingItems = async ({
+  token,
+  userId,
+}: PetAuthParams): Promise<PetListingItem[]> => {
+  const listingPage = await fetchPetListingPage({
+    ignorePagination: true,
+    page: 0,
+    token,
+    userId,
+  });
+
+  return listingPage.items;
+};
+
+export const fetchPetDetailsItem = async ({
+  petId,
+  token,
+  userId,
+}: FetchPetDetailsParams): Promise<PetDetailsItem> => {
+  const [pet, favoritePetIds] = await Promise.all([
+    petService.getPetById({ petId, token }),
+    fetchFavoritePetIds({ token, userId }),
+  ]);
+
+  return mapPetToDetailsItem(pet, favoritePetIds);
+};
+
+export const updatePetFavorite = async ({
+  favorited,
+  petId,
+  token,
+  userId,
+}: SetPetFavoriteParams): Promise<boolean> => {
+  return favorited
+    ? petService.addFavorite({ petId, token, userId })
+    : petService.removeFavorite({ petId, token, userId });
+};
+
+export const createPetAdoptionRequest = async ({
+  message,
+  petId,
+  token,
+  userId,
+}: CreatePetAdoptionRequestParams) => {
+  return petService.createAdoptionRequest({
+    message,
+    petId,
+    token,
+    userId,
+  });
+};
+
+export const cancelPendingPetAdoptionRequest = async ({
+  petId,
+  reviewNotes,
+  token,
+  userId,
+}: CancelPendingPetAdoptionRequestParams) => {
+  const adoptionRequests = await petService.getUserAdoptionRequests({
+    token,
+    userId,
+  });
+  const pendingAdoptionRequest = adoptionRequests.find((adoptionRequest) => {
+    const requestPetId = resolveAdoptionRequestPetId(adoptionRequest);
+    const requestStatus = normalizeAdoptionRequestStatus(adoptionRequest.status);
+
+    return requestPetId === petId && requestStatus === "PENDING";
+  });
+
+  if (!pendingAdoptionRequest) {
+    throw new Error("No pending adoption request found for this pet.");
+  }
+
+  return petService.updateAdoptionRequestStatus({
+    requestId: pendingAdoptionRequest.id,
+    reviewNotes,
+    status: "CANCELLED",
+    token,
+    userId,
+  });
 };

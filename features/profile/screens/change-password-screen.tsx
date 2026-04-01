@@ -281,8 +281,15 @@ export default function ChangePasswordScreen() {
     );
     setErrors(nextErrors);
     clearTransientErrors();
+    const normalizedOtpCode = otpCode.trim();
 
     if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
+    if (normalizedOtpCode.length < OTP_LENGTH) {
+      setOtpError(ERROR_MESSAGES.otpRequired);
+      setStep("otp");
       return;
     }
 
@@ -294,6 +301,7 @@ export default function ChangePasswordScreen() {
         confirmPassword,
         email: email.trim(),
         newPassword,
+        otp: normalizedOtpCode,
       });
       showToast("Password updated successfully.");
       clearPasswordFields();

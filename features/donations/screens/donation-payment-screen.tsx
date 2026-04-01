@@ -5,21 +5,30 @@ import { AppToast } from "@/components/ui/app-toast";
 import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import {
   DONATION_ASSETS,
-  getDonationCauseById,
+  fetchDonationCauseById,
+  formatDonationAmount,
+  formatDonationCampaignDate,
+  formatDonationCampaignStatus,
+  formatDonationCampaignType,
   getDonationPaymentMethods,
+  getDonationProgress,
+  isDonationCampaignDonatable,
 } from "@/features/donations/donations.data";
 import type {
+  DonationCauseItem,
   DonationPaymentDraft,
   DonationPaymentMethod,
 } from "@/features/donations/donations.types";
+import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/services/api/api-error";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -63,6 +72,7 @@ const parseAmount = (value: string) => {
 
 export default function DonationPaymentScreen() {
   const router = useRouter();
+  const { isHydrating, session } = useAuth();
   const params = useLocalSearchParams<{
     donationId?: string | string[];
     donationTitle?: string | string[];
@@ -78,13 +88,21 @@ export default function DonationPaymentScreen() {
   );
   const donationId = normalizeParam(params.donationId);
   const donationTitleParam = normalizeParam(params.donationTitle)?.trim();
-  const donationCause = useMemo(
-    () => (donationId ? getDonationCauseById(donationId) : null),
-    [donationId],
-  );
+  const [donationCause, setDonationCause] = useState<DonationCauseItem | null>(null);
+  const [isDonationCauseLoading, setIsDonationCauseLoading] = useState(true);
   const donationTitle =
     donationCause?.title ?? donationTitleParam ?? "Shelter No.";
-  const donationContextLabel = donationCause?.shortLabel ?? "Donation";
+  const donationContextLabel = donationCause
+    ? formatDonationCampaignType(donationCause.type)
+    : "Donation";
+  const campaignStatusText = donationCause
+    ? formatDonationCampaignStatus(donationCause.status)
+    : null;
+  const campaignDeadlineText = formatDonationCampaignDate(donationCause?.deadline);
+  const campaignProgress = donationCause ? getDonationProgress(donationCause) : 0;
+  const canDonateToCampaign = donationCause
+    ? isDonationCampaignDonatable(donationCause)
+    : true;
   const paymentMethods = useMemo(() => getDonationPaymentMethods(), []);
   const { hideToast, showToast, toast } = useToast();
   const [amountInput, setAmountInput] = useState("");
@@ -110,7 +128,7 @@ export default function DonationPaymentScreen() {
     () => ({
       donationId: donationCause?.id ?? donationId ?? "unknown",
       donationTitle,
-      donationCategory: donationCause?.category ?? "shelter",
+      donationType: donationCause?.type ?? "OTHER",
       selectedAmount: parseAmount(amountInput),
       selectedPaymentModeId,
       qrImage: selectedPaymentMethod?.qrImage ?? null,
@@ -121,8 +139,8 @@ export default function DonationPaymentScreen() {
     }),
     [
       amountInput,
-      donationCause?.category,
       donationCause?.id,
+      donationCause?.type,
       donationId,
       donationTitle,
       proofImageUri,
@@ -133,6 +151,62 @@ export default function DonationPaymentScreen() {
       specialMessage,
     ],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDonationCause = async () => {
+      if (isHydrating) {
+        if (isMounted) {
+          setIsDonationCauseLoading(true);
+        }
+        return;
+      }
+
+      if (!donationId || !session?.accessToken) {
+        if (isMounted) {
+          setDonationCause(null);
+          setIsDonationCauseLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsDonationCauseLoading(true);
+      }
+
+      try {
+        const campaign = await fetchDonationCauseById(
+          donationId,
+          session.accessToken,
+        );
+
+        if (isMounted) {
+          setDonationCause(campaign);
+        }
+      } catch (error) {
+        console.error("[donation-payment] Failed to load campaign", error);
+
+        if (isMounted) {
+          setDonationCause(null);
+          showToast(
+            getErrorMessage(error, "Unable to load donation campaign."),
+            "error",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsDonationCauseLoading(false);
+        }
+      }
+    };
+
+    void loadDonationCause();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [donationId, isHydrating, session?.accessToken, showToast]);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -217,6 +291,11 @@ export default function DonationPaymentScreen() {
   };
 
   const handlePrepareSubmission = () => {
+    if (donationCause && !canDonateToCampaign) {
+      showToast("This campaign is no longer accepting donations.", "error");
+      return;
+    }
+
     const parsedAmount = parseAmount(amountInput);
 
     if (!parsedAmount) {
@@ -312,6 +391,27 @@ export default function DonationPaymentScreen() {
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>{donationTitle}</Text>
             <Text style={styles.causeName}>{donationContextLabel}</Text>
+            {isDonationCauseLoading ? (
+              <Text style={styles.campaignMetaLabel}>Loading campaign details...</Text>
+            ) : null}
+            {campaignStatusText ? (
+              <Text style={styles.campaignMetaLabel}>{`Status: ${campaignStatusText}`}</Text>
+            ) : null}
+            {donationCause ? (
+              <Text style={styles.campaignMetaLabel}>
+                {`${formatDonationAmount(donationCause.totalDonatedCost)} of ${formatDonationAmount(donationCause.totalCost)} raised (${Math.round(
+                  campaignProgress * 100,
+                )}%)`}
+              </Text>
+            ) : null}
+            {campaignDeadlineText ? (
+              <Text style={styles.campaignMetaLabel}>{`Deadline: ${campaignDeadlineText}`}</Text>
+            ) : null}
+            {donationCause && !canDonateToCampaign ? (
+              <Text style={styles.campaignClosedLabel}>
+                This campaign is no longer accepting donations.
+              </Text>
+            ) : null}
 
             <PaymentMethodSelect
               methods={paymentMethods}
@@ -377,9 +477,11 @@ export default function DonationPaymentScreen() {
 
           <Pressable
             accessibilityRole="button"
+            disabled={!canDonateToCampaign}
             onPress={handlePrepareSubmission}
             style={({ pressed }) => [
               styles.submitButton,
+              !canDonateToCampaign && styles.submitButtonDisabled,
               pressed && styles.pressed,
             ]}
           >
@@ -480,6 +582,22 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       lineHeight: 17,
       fontWeight: "700",
     },
+    campaignMetaLabel: {
+      ...roundedText,
+      marginTop: 3,
+      color: colors.dashboardSubtleText,
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: "700",
+    },
+    campaignClosedLabel: {
+      ...roundedText,
+      marginTop: 6,
+      color: "#FFE0E0",
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: "800",
+    },
     paymentModeRow: {
       marginTop: 10,
     },
@@ -576,6 +694,9 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) => {
       lineHeight: 32,
       fontWeight: "900",
       letterSpacing: 0.3,
+    },
+    submitButtonDisabled: {
+      opacity: 0.45,
     },
     errorLabel: {
       ...roundedText,

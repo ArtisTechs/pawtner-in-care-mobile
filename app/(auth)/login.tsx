@@ -447,8 +447,15 @@ export default function Login() {
     const nextErrors = validatePasswordResetForm(form);
     setErrors(nextErrors);
     clearTransientErrors();
+    const normalizedOtpCode = otpCode.trim();
 
     if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
+    if (normalizedOtpCode.length < OTP_LENGTH) {
+      setOtpError(ERROR_MESSAGES.otpRequired);
+      setForgotPasswordStep("otp");
       return;
     }
 
@@ -460,6 +467,7 @@ export default function Login() {
         confirmPassword: form.confirmPassword,
         email: form.email.trim(),
         newPassword: form.password,
+        otp: normalizedOtpCode,
       });
       setForgotPasswordStep("idle");
       setOtpCode("");

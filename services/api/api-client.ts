@@ -9,6 +9,8 @@ type RequestOptions<TBody> = {
   token?: string;
 };
 
+const normalizeToken = (token?: string) => token?.replace(/^Bearer\s+/i, "").trim() ?? "";
+
 const buildUrl = (path: string) => {
   if (/^https?:\/\//i.test(path)) {
     return path;
@@ -34,26 +36,36 @@ async function request<TResponse, TBody = undefined>(
   path: string,
   options: RequestOptions<TBody> = {},
 ) {
+  const method = options.method ?? "GET";
+  const url = buildUrl(path);
   const headers = new Headers(options.headers);
 
   if (options.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  if (options.token) {
-    headers.set("Authorization", `Bearer ${options.token}`);
+  const normalizedToken = normalizeToken(options.token);
+
+  if (normalizedToken) {
+    headers.set("Authorization", `Bearer ${normalizedToken}`);
   }
 
   let response: Response;
 
   try {
-    response = await fetch(buildUrl(path), {
-      method: options.method ?? "GET",
+    response = await fetch(url, {
+      method,
       headers,
       body:
         options.body === undefined ? undefined : JSON.stringify(options.body),
     });
-  } catch {
+  } catch (error) {
+    console.error("[apiClient] Network error", {
+      error,
+      method,
+      url,
+    });
+
     throw new Error(
       `Unable to reach the API. Verify the base URL in config/env.ts or EXPO_PUBLIC_API_BASE_URL. Current base URL: ${API_CONFIG.baseUrl}`,
     );
@@ -63,6 +75,14 @@ async function request<TResponse, TBody = undefined>(
   const payload = parseResponseBody(rawBody);
 
   if (!response.ok) {
+    console.error("[apiClient] Request failed", {
+      method,
+      payload,
+      status: response.status,
+      statusText: response.statusText,
+      url,
+    });
+
     throw ApiError.fromResponse(response.status, payload);
   }
 
