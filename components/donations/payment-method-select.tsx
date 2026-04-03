@@ -30,9 +30,22 @@ export function PaymentMethodSelect({
   const colors = Colors[colorScheme];
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const hasMethods = methods.length > 0;
+
+  let selectedLabel = "No payment modes";
+
+  if (hasMethods) {
+    selectedLabel = "Payment:";
+  }
+
+  if (selectedMethod) {
+    selectedLabel = selectedMethod.name;
+  }
 
   const referenceValue =
-    selectedMethod?.accountNumber || selectedMethod?.referenceLabel || "**********";
+    selectedMethod?.accountNumber ||
+    selectedMethod?.referenceLabel ||
+    (hasMethods ? "**********" : "No account number");
 
   return (
     <View style={[styles.wrapper, style]}>
@@ -45,14 +58,22 @@ export function PaymentMethodSelect({
         >
           <Pressable
             accessibilityRole="button"
-            onPress={() => setIsDropdownOpen((currentValue) => !currentValue)}
+            disabled={!hasMethods}
+            onPress={() => {
+              if (!hasMethods) {
+                return;
+              }
+
+              setIsDropdownOpen((currentValue) => !currentValue);
+            }}
             style={({ pressed }) => [
               styles.dropdownButton,
+              !hasMethods && styles.dropdownButtonDisabled,
               pressed && styles.pressed,
             ]}
           >
             <Text numberOfLines={1} style={styles.dropdownLabel}>
-              {selectedMethod ? selectedMethod.name : "Payment:"}
+              {selectedLabel}
             </Text>
             <MaterialIcons
               color={colors.dashboardBottomIcon}
@@ -125,6 +146,9 @@ const createStyles = (colors: typeof Colors.light) =>
       shadowOpacity: 0.2,
       shadowRadius: 4,
       elevation: 2,
+    },
+    dropdownButtonDisabled: {
+      opacity: 0.7,
     },
     dropdownLabel: {
       fontFamily: RoundedFontFamily,

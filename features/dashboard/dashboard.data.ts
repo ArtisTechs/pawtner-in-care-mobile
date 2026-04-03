@@ -15,6 +15,7 @@ export type DashboardCategoryItem = {
 export type DashboardPetItem = {
   age: string;
   vaccinated: boolean;
+  status?: string;
   isFavorite?: boolean;
   id: string;
   petId: string;

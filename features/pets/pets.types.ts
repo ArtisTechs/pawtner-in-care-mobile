@@ -9,6 +9,7 @@ export type PetListingItem = {
   name: string;
   type: PetType;
   breed: string;
+  status?: string;
   sex: "Male" | "Female";
   age: string;
   vaccinated: boolean;

@@ -1,17 +1,25 @@
-import { Colors, RoundedFontFamily } from "@/constants/theme";
+import {
+  Colors,
+  DisplayFontFamily,
+  RoundedFontFamily,
+} from "@/constants/theme";
+import {
+  IN_PROGRESS_ADOPTION_LABEL,
+  isInProgressPetStatus,
+} from "@/features/pets/pet-status";
 import { PET_ASSETS } from "@/features/pets/pets.data";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import type { PetListingItem } from "@/features/pets/pets.types";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import React, { useMemo } from "react";
 import {
   type GestureResponderEvent,
+  type StyleProp,
+  type ViewStyle,
   Image,
   Pressable,
   StyleSheet,
   Text,
-  type StyleProp,
-  type ViewStyle,
   View,
 } from "react-native";
 
@@ -22,7 +30,12 @@ type PetCardProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function PetCard({ item, onPress, onToggleFavorite, style }: PetCardProps) {
+export function PetCard({
+  item,
+  onPress,
+  onToggleFavorite,
+  style,
+}: PetCardProps) {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -35,6 +48,7 @@ export function PetCard({ item, onPress, onToggleFavorite, style }: PetCardProps
         : defaultImage
       : item.image || defaultImage;
   const hasAge = item.age.trim().length > 0;
+  const isInProgress = isInProgressPetStatus(item.status);
 
   const handleFavoritePress = (event: GestureResponderEvent) => {
     event.stopPropagation();
@@ -44,22 +58,14 @@ export function PetCard({ item, onPress, onToggleFavorite, style }: PetCardProps
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={!onPress}
+      disabled={!onPress || isInProgress}
       onPress={onPress}
       style={({ pressed }) => [
         styles.cardPressable,
-        pressed && onPress && styles.cardPressed,
+        pressed && onPress && !isInProgress && styles.cardPressed,
       ]}
     >
-      <View
-        style={[
-          styles.card,
-          {
-            shadowColor: colors.dashboardShadow,
-          },
-          style,
-        ]}
-      >
+      <View style={[styles.card, style]}>
         <Image source={imageSource} style={styles.image} resizeMode="cover" />
 
         <View style={styles.content}>
@@ -73,9 +79,17 @@ export function PetCard({ item, onPress, onToggleFavorite, style }: PetCardProps
             {item.vaccinated ? "Vaccinated" : "Not Vaccinated"}
           </Text>
         </View>
+        {isInProgress ? (
+          <View pointerEvents="none" style={styles.statusOverlay}>
+            <Text numberOfLines={1} style={styles.statusOverlayText}>
+              {IN_PROGRESS_ADOPTION_LABEL}
+            </Text>
+          </View>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
+          disabled={isInProgress}
           hitSlop={8}
           onPress={handleFavoritePress}
           style={({ pressed }) => [
@@ -115,10 +129,6 @@ const createStyles = (colors: typeof Colors.light) =>
       padding: 8,
       flexDirection: "row",
       alignItems: "center",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      elevation: 4,
       gap: 10,
     },
     image: {
@@ -158,6 +168,28 @@ const createStyles = (colors: typeof Colors.light) =>
     secondaryNoAge: {
       marginTop: 0,
     },
+    statusOverlay: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      borderRadius: 12,
+      backgroundColor: "rgba(16, 28, 47, 0.56)",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 10,
+      zIndex: 2,
+    },
+    statusOverlayText: {
+      fontFamily: DisplayFontFamily,
+      color: "#FFFFFF",
+      fontSize: 16,
+      lineHeight: 19,
+      fontWeight: "400",
+      textAlign: "center",
+      letterSpacing: 0.15,
+    },
     favoriteButton: {
       width: 32,
       height: 32,
@@ -168,6 +200,7 @@ const createStyles = (colors: typeof Colors.light) =>
       position: "absolute",
       right: 8,
       bottom: 8,
+      zIndex: 1,
     },
     favoriteButtonActive: {
       backgroundColor: "#C6DFFE",

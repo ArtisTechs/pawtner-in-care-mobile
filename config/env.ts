@@ -13,8 +13,8 @@ const extra = (Constants.expoConfig?.extra ?? {}) as ExpoExtra;
 
 const fallbackBaseUrl =
   Platform.OS === "android"
-    ? "http://192.168.0.229:8080/api"
-    : "http://192.168.0.229:8080/api";
+    ? "http://192.168.0.229:8081/api"
+    : "http://192.168.0.229:8081/api";
 
 const configuredBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? extra.apiBaseUrl ?? fallbackBaseUrl;
@@ -31,7 +31,9 @@ export const MAP_CONFIG = {
 } as const;
 
 const configuredCloudinaryCloudName =
-  process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? extra.cloudinaryCloudName ?? "";
+  process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ??
+  extra.cloudinaryCloudName ??
+  "";
 
 const configuredCloudinaryUploadPreset =
   process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET ??

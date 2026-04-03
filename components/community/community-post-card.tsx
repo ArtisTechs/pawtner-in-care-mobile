@@ -5,21 +5,35 @@ import {
   resolveImageSource,
   resolveOptionalImageSource,
 } from "@/features/community/community.data";
-import type { CommunityPost } from "@/features/community/community.types";
+import { buildCommunityVideoHtml } from "@/features/community/community-video";
+import type {
+  CommunityImageSource,
+  CommunityPost,
+} from "@/features/community/community.types";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React, { useMemo } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { WebView } from "react-native-webview";
 
 type CommunityPostCardProps = {
   post: CommunityPost;
   onPressComment: (postId: string) => void;
+  onPressImage: (images: CommunityImageSource[], imageIndex: number) => void;
   onPressLike: (postId: string) => void;
 };
 
 export function CommunityPostCard({
   post,
   onPressComment,
+  onPressImage,
   onPressLike,
 }: CommunityPostCardProps) {
   const colorScheme = useColorScheme() ?? "light";
@@ -30,9 +44,19 @@ export function CommunityPostCard({
   const hasBodyContent = Boolean(postBodyText);
   const avatarSource = resolveOptionalImageSource(post.userAvatar);
   const postImages = post.images ?? [];
-  const hasVideo = Boolean(post.videoUri);
+  const normalizedVideoUri = post.videoUri?.trim() ?? "";
+  const hasVideo = Boolean(normalizedVideoUri);
   const hasSingleImage = postImages.length === 1;
   const hasMultipleImages = postImages.length > 1;
+  const videoHtml = useMemo(() => {
+    if (!normalizedVideoUri) {
+      return "";
+    }
+
+    return buildCommunityVideoHtml({
+      videoUri: normalizedVideoUri,
+    });
+  }, [normalizedVideoUri]);
 
   return (
     <View style={styles.card}>
@@ -70,21 +94,32 @@ export function CommunityPostCard({
 
       {hasVideo ? (
         <View style={styles.videoPreview}>
-          <MaterialIcons
-            color={colors.white}
-            name="play-circle-filled"
-            size={38}
+          <WebView
+            allowsFullscreenVideo
+            allowsInlineMediaPlayback
+            mixedContentMode="always"
+            mediaPlaybackRequiresUserAction={false}
+            originWhitelist={["*"]}
+            scrollEnabled={false}
+            source={{ html: videoHtml }}
+            style={styles.videoPlayer}
           />
-          <Text style={styles.videoLabel}>Video post</Text>
         </View>
       ) : null}
 
       {hasSingleImage ? (
-        <Image
-          source={resolveImageSource(postImages[0])}
-          style={styles.postImage}
-          resizeMode="cover"
-        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Preview post image"
+          onPress={() => onPressImage(postImages, 0)}
+          style={({ pressed }) => [styles.postImageButton, pressed && styles.pressed]}
+        >
+          <Image
+            source={resolveImageSource(postImages[0])}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+        </Pressable>
       ) : null}
 
       {hasMultipleImages ? (
@@ -95,12 +130,19 @@ export function CommunityPostCard({
             contentContainerStyle={styles.multiImageContent}
           >
             {postImages.map((image, index) => (
-              <Image
+              <Pressable
                 key={`${post.id}-image-${index}`}
-                source={resolveImageSource(image)}
-                style={styles.multiImage}
-                resizeMode="cover"
-              />
+                accessibilityRole="button"
+                accessibilityLabel={`Preview post image ${index + 1}`}
+                onPress={() => onPressImage(postImages, index)}
+                style={({ pressed }) => [pressed && styles.pressed]}
+              >
+                <Image
+                  source={resolveImageSource(image)}
+                  style={styles.multiImage}
+                  resizeMode="cover"
+                />
+              </Pressable>
             ))}
           </ScrollView>
 
@@ -195,21 +237,19 @@ const createStyles = (colors: typeof Colors.light) =>
       width: "100%",
       minHeight: 170,
       backgroundColor: colors.dashboardBottomIconActive,
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
+      aspectRatio: 16 / 9,
     },
-    videoLabel: {
-      fontFamily: RoundedFontFamily,
-      color: colors.white,
-      fontSize: 14,
-      lineHeight: 17,
-      fontWeight: "800",
+    videoPlayer: {
+      flex: 1,
+      backgroundColor: colors.dashboardBottomIconActive,
     },
     postImage: {
       width: "100%",
       aspectRatio: 1.58,
       backgroundColor: "rgba(44, 110, 184, 0.12)",
+    },
+    postImageButton: {
+      width: "100%",
     },
     multiImageWrap: {
       width: "100%",
@@ -235,5 +275,8 @@ const createStyles = (colors: typeof Colors.light) =>
       lineHeight: 14,
       fontWeight: "700",
       opacity: 0.84,
+    },
+    pressed: {
+      opacity: 0.82,
     },
   });

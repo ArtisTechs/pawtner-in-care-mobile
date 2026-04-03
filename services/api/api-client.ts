@@ -1,6 +1,6 @@
 import { API_CONFIG } from "@/config/env";
 
-import { ApiError } from "./api-error";
+import { ApiError, isInvalidBearerTokenError } from "./api-error";
 
 type RequestOptions<TBody> = {
   body?: TBody;
@@ -9,7 +9,18 @@ type RequestOptions<TBody> = {
   token?: string;
 };
 
+export type ApiAuthFailureContext = {
+  error: ApiError;
+  hasAuthorizationHeader: boolean;
+  method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
+  path: string;
+  url: string;
+};
+
+type ApiAuthFailureHandler = (context: ApiAuthFailureContext) => void;
+
 const normalizeToken = (token?: string) => token?.replace(/^Bearer\s+/i, "").trim() ?? "";
+let authFailureHandler: ApiAuthFailureHandler | null = null;
 
 const buildUrl = (path: string) => {
   if (/^https?:\/\//i.test(path)) {
@@ -32,6 +43,33 @@ const parseResponseBody = (rawBody: string) => {
   }
 };
 
+const notifyAuthFailure = (context: ApiAuthFailureContext) => {
+  if (!authFailureHandler) {
+    return;
+  }
+
+  try {
+    authFailureHandler(context);
+  } catch (error) {
+    console.error("[apiClient] Auth failure handler threw an error", {
+      error,
+      method: context.method,
+      path: context.path,
+      url: context.url,
+    });
+  }
+};
+
+export const setApiAuthFailureHandler = (handler: ApiAuthFailureHandler | null) => {
+  authFailureHandler = handler;
+
+  return () => {
+    if (authFailureHandler === handler) {
+      authFailureHandler = null;
+    }
+  };
+};
+
 async function request<TResponse, TBody = undefined>(
   path: string,
   options: RequestOptions<TBody> = {},
@@ -49,6 +87,8 @@ async function request<TResponse, TBody = undefined>(
   if (normalizedToken) {
     headers.set("Authorization", `Bearer ${normalizedToken}`);
   }
+
+  const hasAuthorizationHeader = headers.has("Authorization");
 
   let response: Response;
 
@@ -75,7 +115,10 @@ async function request<TResponse, TBody = undefined>(
   const payload = parseResponseBody(rawBody);
 
   if (!response.ok) {
+    const apiError = ApiError.fromResponse(response.status, payload);
+
     console.error("[apiClient] Request failed", {
+      errorMessage: apiError.message,
       method,
       payload,
       status: response.status,
@@ -83,7 +126,17 @@ async function request<TResponse, TBody = undefined>(
       url,
     });
 
-    throw ApiError.fromResponse(response.status, payload);
+    if (hasAuthorizationHeader && isInvalidBearerTokenError(apiError)) {
+      notifyAuthFailure({
+        error: apiError,
+        hasAuthorizationHeader,
+        method,
+        path,
+        url,
+      });
+    }
+
+    throw apiError;
   }
 
   return payload as TResponse;

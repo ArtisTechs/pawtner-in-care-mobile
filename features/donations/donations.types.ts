@@ -40,10 +40,10 @@ export type DonationFilterOption = {
 
 export type DonationPaymentMethod = {
   accountName: string;
-  accountNumber: string;
+  accountNumber: string | null;
   id: string;
   name: string;
-  qrImage: string;
+  qrImage: string | null;
   referenceLabel: string;
 };
 

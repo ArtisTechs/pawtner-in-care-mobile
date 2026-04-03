@@ -12,6 +12,7 @@ import {
 } from "@/features/dashboard/dashboard.data";
 import { NOTIFICATION_MOCK_DATA } from "@/features/notifications/notifications.data";
 import { emitPetFavoriteChanged, subscribePetFavoriteChanged } from "@/features/pets/pet-favorite-sync";
+import { isInProgressPetStatus, normalizePetStatus } from "@/features/pets/pet-status";
 import { fetchPetListingItems, updatePetFavorite } from "@/features/pets/pets.data";
 import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -24,6 +25,7 @@ import {
   FlatList,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -34,6 +36,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MAX_CONTENT_WIDTH = 420;
+const EXCLUDED_WAITING_PET_STATUSES = new Set(["ADOPTED"]);
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -54,6 +57,7 @@ export default function DashboardScreen() {
   const { showToast } = useToast();
   const [waitingPets, setWaitingPets] = useState<DashboardPetItem[]>([]);
   const [isWaitingPetsLoading, setIsWaitingPetsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [favoriteSyncingPetIds, setFavoriteSyncingPetIds] = useState<Set<string>>(
     () => new Set<string>(),
   );
@@ -158,6 +162,61 @@ export default function DashboardScreen() {
     }
   };
 
+  const fetchWaitingPetsForDashboard = useCallback(async () => {
+    if (!session?.accessToken || !session.user.id) {
+      return [] as DashboardPetItem[];
+    }
+
+    const listingPets = await fetchPetListingItems({
+      token: session.accessToken,
+      userId: session.user.id,
+    });
+    const waitingEligiblePets = listingPets.filter((pet) => {
+      const normalizedStatus = normalizePetStatus(pet.status);
+
+      if (isInProgressPetStatus(normalizedStatus)) {
+        return false;
+      }
+
+      return !EXCLUDED_WAITING_PET_STATUSES.has(normalizedStatus ?? "");
+    });
+
+    const favoriteListingPets = waitingEligiblePets.filter((pet) => pet.isFavorite);
+    const sourcePets =
+      favoriteListingPets.length > 0 ? favoriteListingPets : waitingEligiblePets;
+
+    return sourcePets.slice(0, 10).map((pet) => ({
+      age: pet.age,
+      id: `waiting-${pet.id}`,
+      image: pet.image,
+      isFavorite: Boolean(pet.isFavorite),
+      name: pet.name,
+      petId: pet.id,
+      sex: pet.sex,
+      status: pet.status,
+      type: pet.type,
+      vaccinated: pet.vaccinated,
+    }));
+  }, [session?.accessToken, session?.user.id]);
+
+  const handleRefresh = useCallback(async () => {
+    if (isHydrating || isRefreshing) {
+      return;
+    }
+
+    setIsRefreshing(true);
+
+    try {
+      const nextWaitingPets = await fetchWaitingPetsForDashboard();
+      setWaitingPets(nextWaitingPets);
+    } catch (error) {
+      console.error("[dashboard] Failed to refresh waiting pets", error);
+      showToast(getErrorMessage(error, "Unable to refresh dashboard."), "error");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchWaitingPetsForDashboard, isHydrating, isRefreshing, showToast]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -182,27 +241,7 @@ export default function DashboardScreen() {
       }
 
       try {
-        const listingPets = await fetchPetListingItems({
-          token: session.accessToken,
-          userId: session.user.id,
-        });
-
-        const favoriteListingPets = listingPets.filter((pet) => pet.isFavorite);
-        const sourcePets =
-          favoriteListingPets.length > 0 ? favoriteListingPets : listingPets;
-        const nextWaitingPets: DashboardPetItem[] = sourcePets
-          .slice(0, 10)
-          .map((pet) => ({
-            age: pet.age,
-            id: `waiting-${pet.id}`,
-            image: pet.image,
-            isFavorite: Boolean(pet.isFavorite),
-            name: pet.name,
-            petId: pet.id,
-            sex: pet.sex,
-            type: pet.type,
-            vaccinated: pet.vaccinated,
-          }));
+        const nextWaitingPets = await fetchWaitingPetsForDashboard();
 
         if (isMounted) {
           setWaitingPets(nextWaitingPets);
@@ -225,7 +264,12 @@ export default function DashboardScreen() {
     return () => {
       isMounted = false;
     };
-  }, [isHydrating, session?.accessToken, session?.user.id]);
+  }, [
+    fetchWaitingPetsForDashboard,
+    isHydrating,
+    session?.accessToken,
+    session?.user.id,
+  ]);
 
   useEffect(() => {
     const unsubscribe = subscribePetFavoriteChanged(({ favorited, petId }) => {
@@ -293,6 +337,15 @@ export default function DashboardScreen() {
             paddingBottom: 132 + insets.bottom,
           },
         ]}
+        refreshControl={
+          <RefreshControl
+            colors={[colors.dashboardBottomIconActive]}
+            onRefresh={handleRefresh}
+            progressBackgroundColor={colors.dashboardSectionCardBackground}
+            refreshing={isRefreshing}
+            tintColor={colors.dashboardBottomIconActive}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>

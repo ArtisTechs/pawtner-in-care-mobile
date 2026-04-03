@@ -1,8 +1,10 @@
 const AUTH_BASE_PATH = "/auth";
 const DONATION_CAMPAIGNS_BASE_PATH = "/donation-campaigns";
+const PAYMENT_MODES_BASE_PATH = "/payment-modes";
 const PETS_BASE_PATH = "/pets";
 const USERS_BASE_PATH = "/users";
 const ADOPTION_REQUESTS_BASE_PATH = "/adoption-requests";
+const COMMUNITY_POSTS_BASE_PATH = "/community/posts";
 
 export const API_ENDPOINTS = {
   auth: {
@@ -18,6 +20,11 @@ export const API_ENDPOINTS = {
     byId: (id: string) =>
       `${DONATION_CAMPAIGNS_BASE_PATH}/${encodeURIComponent(id)}`,
     types: `${DONATION_CAMPAIGNS_BASE_PATH}/types`,
+  },
+  paymentModes: {
+    base: PAYMENT_MODES_BASE_PATH,
+    byId: (id: string) =>
+      `${PAYMENT_MODES_BASE_PATH}/${encodeURIComponent(id)}`,
   },
   pets: {
     base: PETS_BASE_PATH,
@@ -39,5 +46,18 @@ export const API_ENDPOINTS = {
     base: ADOPTION_REQUESTS_BASE_PATH,
     statusById: (requestId: string) =>
       `${ADOPTION_REQUESTS_BASE_PATH}/${encodeURIComponent(requestId)}/status`,
+  },
+  community: {
+    base: COMMUNITY_POSTS_BASE_PATH,
+    byId: (postId: string) =>
+      `${COMMUNITY_POSTS_BASE_PATH}/${encodeURIComponent(postId)}`,
+    likes: (postId: string) =>
+      `${COMMUNITY_POSTS_BASE_PATH}/${encodeURIComponent(postId)}/likes`,
+    comments: (postId: string) =>
+      `${COMMUNITY_POSTS_BASE_PATH}/${encodeURIComponent(postId)}/comments`,
+    commentById: (postId: string, commentId: string) =>
+      `${COMMUNITY_POSTS_BASE_PATH}/${encodeURIComponent(postId)}/comments/${encodeURIComponent(
+        commentId,
+      )}`,
   },
 } as const;

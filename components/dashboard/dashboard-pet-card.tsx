@@ -1,5 +1,9 @@
-import { RoundedFontFamily } from "@/constants/theme";
+import { DisplayFontFamily, RoundedFontFamily } from "@/constants/theme";
 import type { DashboardPetItem } from "@/features/dashboard/dashboard.data";
+import {
+  IN_PROGRESS_ADOPTION_LABEL,
+  isInProgressPetStatus,
+} from "@/features/pets/pet-status";
 import { PET_ASSETS } from "@/features/pets/pets.data";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import React from "react";
@@ -37,6 +41,7 @@ export function DashboardPetCard({
   const imageSource = resolveImageSource(item.image, item.type);
   const isFavorite = Boolean(item.isFavorite);
   const hasAge = item.age.trim().length > 0;
+  const isInProgress = isInProgressPetStatus(item.status);
   const handleFavoritePress = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onToggleFavorite?.(item.petId);
@@ -45,18 +50,16 @@ export function DashboardPetCard({
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={!onPress}
+      disabled={!onPress || isInProgress}
       onPress={onPress}
       style={({ pressed }) => [
         styles.cardPressable,
-        pressed && onPress && styles.cardPressed,
-        {
-          backgroundColor: cardBackgroundColor,
-          shadowColor: cardShadowColor,
-        },
+        pressed && onPress && !isInProgress && styles.cardPressed,
       ]}
     >
-      <View style={styles.cardSurface}>
+      <View
+        style={[styles.cardSurface, { backgroundColor: cardBackgroundColor }]}
+      >
         <Image source={imageSource} style={styles.image} resizeMode="cover" />
         <View style={[styles.content, !hasAge && styles.contentNoAge]}>
           <Text numberOfLines={1} style={[styles.name, { color: textColor }]}>
@@ -85,9 +88,16 @@ export function DashboardPetCard({
             </Text>
           </View>
         </View>
+        {isInProgress ? (
+          <View pointerEvents="none" style={styles.statusOverlay}>
+            <Text numberOfLines={2} style={styles.statusOverlayText}>
+              {IN_PROGRESS_ADOPTION_LABEL}
+            </Text>
+          </View>
+        ) : null}
         <Pressable
           accessibilityRole="button"
-          disabled={favoriteDisabled || !onToggleFavorite}
+          disabled={favoriteDisabled || !onToggleFavorite || isInProgress}
           hitSlop={8}
           onPress={handleFavoritePress}
           style={({ pressed }) => [
@@ -130,15 +140,14 @@ const resolveImageSource = (
 const styles = StyleSheet.create({
   cardPressable: {
     width: 102,
+    height: 164,
+    alignSelf: "flex-start",
     marginVertical: 3,
     borderRadius: 12,
     overflow: "visible",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.24,
-    shadowRadius: 8,
-    elevation: 6,
   },
   cardSurface: {
+    height: "100%",
     position: "relative",
     borderRadius: 12,
     overflow: "hidden",
@@ -189,6 +198,28 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 2,
   },
+  statusOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(16, 28, 47, 0.56)",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    zIndex: 2,
+  },
+  statusOverlayText: {
+    fontFamily: DisplayFontFamily,
+    color: "#FFFFFF",
+    fontSize: 12,
+    lineHeight: 9,
+    fontWeight: "400",
+    textAlign: "center",
+    letterSpacing: 0.1,
+  },
   favoriteButton: {
     width: 20,
     height: 20,
@@ -199,6 +230,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 7,
     bottom: 7,
+    zIndex: 1,
   },
   favoriteButtonActive: {
     backgroundColor: "rgba(198, 223, 254, 0.95)",

@@ -4,6 +4,9 @@ type ApiErrorPayload = {
 };
 
 const DEFAULT_API_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const UNAUTHORIZED_STATUSES = new Set([401, 403]);
+const TOKEN_MESSAGE_PATTERN = /\b(token|bearer|jwt)\b/i;
+const TOKEN_FAILURE_PATTERN = /\b(invalid|expired|malformed|revoked|unauthorized)\b/i;
 
 const extractApiErrorMessage = (
   payload: unknown,
@@ -43,6 +46,29 @@ export class ApiError extends Error {
     return new ApiError(status, extractApiErrorMessage(payload), payload);
   }
 }
+
+export const isUnauthorizedStatus = (status: number) =>
+  UNAUTHORIZED_STATUSES.has(status);
+
+const getNormalizedErrorMessage = (error: unknown) =>
+  extractApiErrorMessage(error).trim().toLowerCase();
+
+export const isInvalidBearerTokenError = (error: unknown) => {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  if (!isUnauthorizedStatus(error.status)) {
+    return false;
+  }
+
+  const normalizedMessage = getNormalizedErrorMessage(error);
+
+  return (
+    TOKEN_MESSAGE_PATTERN.test(normalizedMessage) &&
+    TOKEN_FAILURE_PATTERN.test(normalizedMessage)
+  );
+};
 
 export const getErrorMessage = (
   error: unknown,

@@ -17,6 +17,7 @@ import type {
   PetMediaItem,
   PetType,
 } from "@/features/pets/pets.types";
+import { normalizePetStatus } from "@/features/pets/pet-status";
 
 type PetFilterOption = {
   key: PetFilter;
@@ -336,6 +337,7 @@ const mapPetToListingItem = (
     location: FALLBACK_PET_LOCATION,
     name: pet.name?.trim() || "Unnamed pet",
     sex: normalizeGender(pet.gender),
+    status: normalizePetStatus(pet.status),
     type,
     vaccinated: Boolean(pet.isVaccinated),
   };

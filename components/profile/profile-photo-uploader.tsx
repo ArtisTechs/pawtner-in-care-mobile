@@ -5,6 +5,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -16,13 +17,15 @@ import {
 
 type ProfilePhotoUploaderProps = {
   disabled?: boolean;
-  onChangePhoto: (photoUri: string | null) => void;
+  isUploading?: boolean;
+  onChangePhoto: (photoUri: string | null) => void | Promise<void>;
   onError?: (message: string) => void;
   photoUri: string | null;
 };
 
 export function ProfilePhotoUploader({
   disabled = false,
+  isUploading = false,
   onChangePhoto,
   onError,
   photoUri,
@@ -68,7 +71,7 @@ export function ProfilePhotoUploader({
         return;
       }
 
-      onChangePhoto(selectedAsset.uri);
+      await onChangePhoto(selectedAsset.uri);
     } catch (error) {
       onError?.(getErrorMessage(error, "Unable to select profile photo right now."));
     } finally {
@@ -77,7 +80,7 @@ export function ProfilePhotoUploader({
   };
 
   const handleClearPhoto = () => {
-    if (disabled || isPickingPhoto) {
+    if (disabled || isPickingPhoto || isUploading) {
       return;
     }
 
@@ -111,12 +114,13 @@ export function ProfilePhotoUploader({
       <View style={styles.card}>
         <Pressable
           accessibilityRole="button"
-          disabled={!photoUri}
+          disabled={!photoUri || isUploading}
           onPress={handlePressPreview}
           style={({ pressed }) => [
             styles.previewWrap,
             !photoUri && styles.previewWrapDisabled,
-            pressed && photoUri && styles.pressed,
+            isUploading && styles.previewWrapLoading,
+            pressed && photoUri && !isUploading && styles.pressed,
           ]}
         >
           {photoUri ? (
@@ -134,38 +138,61 @@ export function ProfilePhotoUploader({
 
         <View style={styles.textWrap}>
           <Text style={styles.title}>Profile Photo</Text>
-          <Text style={styles.subtitle}>{isPickingPhoto ? "Selecting photo..." : "Tap photo to preview"}</Text>
+          <Text style={styles.subtitle}>
+            {isUploading
+              ? "Uploading to Cloudinary..."
+              : isPickingPhoto
+                ? "Selecting photo..."
+                : "Tap photo to preview"}
+          </Text>
         </View>
 
         <View style={styles.actionsWrap}>
           <View style={styles.actionButtonsRow}>
             <Pressable
               accessibilityRole="button"
-              disabled={disabled || isPickingPhoto}
+              disabled={disabled || isPickingPhoto || isUploading}
               onPress={() => void handlePickPhoto()}
               style={({ pressed }) => [
                 styles.uploadButton,
-                (disabled || isPickingPhoto) && styles.uploadButtonDisabled,
-                pressed && !disabled && !isPickingPhoto && styles.pressed,
+                (disabled || isPickingPhoto || isUploading) &&
+                  styles.uploadButtonDisabled,
+                pressed && !disabled && !isPickingPhoto && !isUploading && styles.pressed,
               ]}
             >
-              <MaterialIcons
-                color={colors.dashboardBottomIconActive}
-                name="upload"
-                size={18}
-              />
+              {isUploading ? (
+                <ActivityIndicator
+                  color={colors.dashboardBottomIconActive}
+                  size="small"
+                />
+              ) : (
+                <MaterialIcons
+                  color={colors.dashboardBottomIconActive}
+                  name="upload"
+                  size={18}
+                />
+              )}
               <Text style={styles.uploadButtonText}>
-                {isPickingPhoto ? "Selecting..." : photoUri ? "Change" : "Upload"}
+                {isUploading
+                  ? "Uploading..."
+                  : isPickingPhoto
+                    ? "Selecting..."
+                    : photoUri
+                      ? "Change"
+                      : "Upload"}
               </Text>
             </Pressable>
 
             {photoUri ? (
               <Pressable
                 accessibilityRole="button"
+                disabled={disabled || isPickingPhoto || isUploading}
                 onPress={handleClearPhoto}
                 style={({ pressed }) => [
                   styles.clearIconButton,
-                  pressed && styles.pressed,
+                  (disabled || isPickingPhoto || isUploading) &&
+                    styles.clearIconButtonDisabled,
+                  pressed && !disabled && !isPickingPhoto && !isUploading && styles.pressed,
                 ]}
               >
                 <MaterialIcons color={colors.loginError} name="delete" size={16} />
@@ -246,6 +273,9 @@ const createStyles = (colors: typeof Colors.light) =>
     previewWrapDisabled: {
       opacity: 0.96,
     },
+    previewWrapLoading: {
+      opacity: 0.72,
+    },
     previewImage: {
       width: "100%",
       height: "100%",
@@ -314,6 +344,9 @@ const createStyles = (colors: typeof Colors.light) =>
       backgroundColor: "rgba(216, 64, 64, 0.12)",
       alignItems: "center",
       justifyContent: "center",
+    },
+    clearIconButtonDisabled: {
+      opacity: 0.5,
     },
     previewBackdrop: {
       flex: 1,

@@ -1,9 +1,11 @@
 import { donationCampaignService } from "@/services/donations/donation-campaign.service";
+import { paymentModeService } from "@/services/donations/payment-mode.service";
 import type {
   DonationCampaignApiItem,
   DonationCampaignStatus,
   DonationCampaignType,
 } from "@/types/donation-campaign";
+import type { PaymentModeApiItem } from "@/types/payment-mode";
 
 import type {
   DonationCauseItem,
@@ -73,54 +75,6 @@ export const DONATION_FILTER_OPTIONS: DonationFilterOption[] = [
   { key: "other", label: "Other" },
 ];
 
-export const DONATION_PAYMENT_METHODS: DonationPaymentMethod[] = [
-  {
-    accountName: "RE***LD *AR*LA",
-    accountNumber: "09338240358",
-    id: "gcash-1",
-    name: "Gcash 1",
-    qrImage:
-      "https://api.qrserver.com/v1/create-qr-code/?size=560x560&data=GCASH_1_09338240358",
-    referenceLabel: "**********",
-  },
-  {
-    accountName: "RE***LD *AR*LA",
-    accountNumber: "09338240359",
-    id: "gcash-2",
-    name: "Gcash 2",
-    qrImage:
-      "https://api.qrserver.com/v1/create-qr-code/?size=560x560&data=GCASH_2_09338240359",
-    referenceLabel: "**********",
-  },
-  {
-    accountName: "NOAHS ARK SHELTER",
-    accountNumber: "0123345599",
-    id: "metrobank",
-    name: "Metrobank",
-    qrImage:
-      "https://api.qrserver.com/v1/create-qr-code/?size=560x560&data=METROBANK_0123345599",
-    referenceLabel: "**********",
-  },
-  {
-    accountName: "NOAHS ARK SHELTER",
-    accountNumber: "09451236789",
-    id: "gotyme",
-    name: "Gotyme",
-    qrImage:
-      "https://api.qrserver.com/v1/create-qr-code/?size=560x560&data=GOTYME_09451236789",
-    referenceLabel: "**********",
-  },
-  {
-    accountName: "NOAHS ARK SHELTER",
-    accountNumber: "00126889973",
-    id: "bpi",
-    name: "BPI",
-    qrImage:
-      "https://api.qrserver.com/v1/create-qr-code/?size=560x560&data=BPI_00126889973",
-    referenceLabel: "**********",
-  },
-];
-
 const normalizeOptionalText = (value?: string | null) => {
   const normalized = value?.trim();
   return normalized ? normalized : undefined;
@@ -165,6 +119,22 @@ const mapCampaignToCause = (
   type: normalizeCampaignType(campaign.type),
   updatedDate: normalizeOptionalText(campaign.updatedDate),
 });
+
+const mapPaymentModeToMethod = (
+  paymentMode: PaymentModeApiItem,
+): DonationPaymentMethod => {
+  const accountNumber = normalizeOptionalText(paymentMode.accountNumber) ?? null;
+  const normalizedName = paymentMode.name.trim() || "Payment mode";
+
+  return {
+    accountName: normalizedName,
+    accountNumber,
+    id: paymentMode.id,
+    name: normalizedName,
+    qrImage: normalizeOptionalText(paymentMode.photoQr) ?? null,
+    referenceLabel: accountNumber ?? "No account number",
+  };
+};
 
 const sortDonationCauses = (donationCauses: DonationCauseItem[]) =>
   [...donationCauses].sort((left, right) => {
@@ -243,7 +213,10 @@ export const fetchDonationCauseById = async (
   return mapCampaignToCause(campaign);
 };
 
-export const getDonationPaymentMethods = () => DONATION_PAYMENT_METHODS;
+export const fetchDonationPaymentMethods = async (token: string) => {
+  const paymentModes = await paymentModeService.getPaymentModes({ token });
+  return paymentModes.map(mapPaymentModeToMethod);
+};
 
 export const isDonationFilter = (value: string): value is DonationFilter =>
   DONATION_FILTER_SET.has(value as DonationFilter);

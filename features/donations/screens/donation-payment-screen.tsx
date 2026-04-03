@@ -6,11 +6,11 @@ import { Colors, DisplayFontFamily, RoundedFontFamily } from "@/constants/theme"
 import {
   DONATION_ASSETS,
   fetchDonationCauseById,
+  fetchDonationPaymentMethods,
   formatDonationAmount,
   formatDonationCampaignDate,
   formatDonationCampaignStatus,
   formatDonationCampaignType,
-  getDonationPaymentMethods,
   getDonationProgress,
   isDonationCampaignDonatable,
 } from "@/features/donations/donations.data";
@@ -103,7 +103,8 @@ export default function DonationPaymentScreen() {
   const canDonateToCampaign = donationCause
     ? isDonationCampaignDonatable(donationCause)
     : true;
-  const paymentMethods = useMemo(() => getDonationPaymentMethods(), []);
+  const [paymentMethods, setPaymentMethods] = useState<DonationPaymentMethod[]>([]);
+  const [isPaymentMethodsLoading, setIsPaymentMethodsLoading] = useState(true);
   const { hideToast, showToast, toast } = useToast();
   const [amountInput, setAmountInput] = useState("");
   const [selectedPaymentModeId, setSelectedPaymentModeId] = useState<
@@ -208,6 +209,63 @@ export default function DonationPaymentScreen() {
     };
   }, [donationId, isHydrating, session?.accessToken, showToast]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPaymentMethods = async () => {
+      if (isHydrating) {
+        if (isMounted) {
+          setIsPaymentMethodsLoading(true);
+        }
+        return;
+      }
+
+      if (!session?.accessToken) {
+        if (isMounted) {
+          setPaymentMethods([]);
+          setSelectedPaymentModeId(null);
+          setIsPaymentMethodsLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsPaymentMethodsLoading(true);
+      }
+
+      try {
+        const methods = await fetchDonationPaymentMethods(session.accessToken);
+
+        if (isMounted) {
+          setPaymentMethods(methods);
+          setSelectedPaymentModeId((currentValue) =>
+            methods.some((method) => method.id === currentValue)
+              ? currentValue
+              : null,
+          );
+        }
+      } catch (error) {
+        console.error("[donation-payment] Failed to load payment modes", error);
+
+        if (isMounted) {
+          setPaymentMethods([]);
+          setSelectedPaymentModeId(null);
+          showToast(getErrorMessage(error, "Unable to load payment modes."), "error");
+        }
+      } finally {
+        if (isMounted) {
+          setIsPaymentMethodsLoading(false);
+        }
+      }
+    };
+
+    void loadPaymentMethods();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isHydrating, session?.accessToken, showToast]);
+
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
@@ -225,13 +283,20 @@ export default function DonationPaymentScreen() {
   };
 
   const handleCopyPaymentDetails = async (method: DonationPaymentMethod) => {
-    await Clipboard.setStringAsync(
-      `${method.accountName}\n${method.accountNumber}`,
-    );
+    const details = method.accountNumber
+      ? `${method.accountName}\n${method.accountNumber}`
+      : method.accountName;
+
+    await Clipboard.setStringAsync(details);
     showToast("Payment details copied.");
   };
 
   const handleSaveQr = async (method: DonationPaymentMethod) => {
+    if (!method.qrImage) {
+      showToast("QR image is not available for this payment mode.", "error");
+      return;
+    }
+
     if (!FileSystem.documentDirectory) {
       showToast("Unable to save QR right now.", "error");
       return;
@@ -419,6 +484,12 @@ export default function DonationPaymentScreen() {
               onSelectMethod={handleSelectPaymentMethod}
               style={styles.paymentModeRow}
             />
+            {isPaymentMethodsLoading ? (
+              <Text style={styles.campaignMetaLabel}>Loading payment modes...</Text>
+            ) : null}
+            {!isPaymentMethodsLoading && paymentMethods.length === 0 ? (
+              <Text style={styles.campaignMetaLabel}>No payment modes available.</Text>
+            ) : null}
 
             {paymentModeError ? (
               <Text style={styles.errorLabel}>{paymentModeError}</Text>

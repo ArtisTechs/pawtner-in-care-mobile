@@ -61,21 +61,31 @@ export function PaymentQrModal({
             </Pressable>
           </View>
 
-          <Image
-            source={{ uri: method.qrImage }}
-            style={styles.qrImage}
-            resizeMode="cover"
-          />
+          {method.qrImage ? (
+            <Image
+              source={{ uri: method.qrImage }}
+              style={styles.qrImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.qrPlaceholder}>
+              <Text style={styles.qrPlaceholderText}>QR image not available</Text>
+            </View>
+          )}
 
           <Text style={styles.accountName}>{method.accountName}</Text>
-          <Text style={styles.accountNumber}>{method.accountNumber}</Text>
+          <Text style={styles.accountNumber}>
+            {method.accountNumber ?? "No account number"}
+          </Text>
 
           <View style={styles.actionRow}>
             <Pressable
               accessibilityRole="button"
+              disabled={!method.qrImage || isSavingQr}
               onPress={() => onSaveQr(method)}
               style={({ pressed }) => [
                 styles.secondaryButton,
+                (!method.qrImage || isSavingQr) && styles.buttonDisabled,
                 pressed && styles.pressed,
               ]}
             >
@@ -161,6 +171,25 @@ const createStyles = (colors: typeof Colors.light) =>
       borderWidth: 1,
       borderColor: "rgba(45, 116, 195, 0.32)",
     },
+    qrPlaceholder: {
+      width: "100%",
+      aspectRatio: 1,
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: "rgba(45, 116, 195, 0.32)",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(45, 116, 195, 0.06)",
+    },
+    qrPlaceholderText: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIconActive,
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: "700",
+      textAlign: "center",
+      paddingHorizontal: 16,
+    },
     accountName: {
       marginTop: 10,
       fontFamily: RoundedFontFamily,
@@ -221,6 +250,9 @@ const createStyles = (colors: typeof Colors.light) =>
       fontSize: 14,
       lineHeight: 14,
       fontWeight: "800",
+    },
+    buttonDisabled: {
+      opacity: 0.6,
     },
     pressed: {
       opacity: 0.84,

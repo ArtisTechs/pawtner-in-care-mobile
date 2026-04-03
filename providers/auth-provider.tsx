@@ -1,5 +1,6 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useEffect, useRef, useState } from "react";
 
+import { setApiAuthFailureHandler } from "@/services/api/api-client";
 import { authService } from "@/services/auth/auth.service";
 import { authStorage } from "@/services/auth/auth.storage";
 import { donationStorage } from "@/services/donations/donation.storage";
@@ -24,6 +25,12 @@ type AuthProviderProps = {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
+  const sessionUserIdRef = useRef<string | undefined>(undefined);
+  const isSigningOutRef = useRef(false);
+
+  useEffect(() => {
+    sessionUserIdRef.current = session?.user.id;
+  }, [session?.user.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -76,17 +83,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.signUp(payload);
   };
 
-  const signOut = async () => {
-    const userId = session?.user.id;
+  const signOut = useCallback(async () => {
+    if (isSigningOutRef.current) {
+      return;
+    }
+
+    isSigningOutRef.current = true;
+    const userId = sessionUserIdRef.current;
     setSession(null);
+    sessionUserIdRef.current = undefined;
+
     await sessionPreloadService.clearSessionCache(userId);
 
     try {
       await donationStorage.clearAllDonationIntroSeen();
     } catch {
       // Keep sign-out non-blocking even if optional cleanup fails.
+    } finally {
+      isSigningOutRef.current = false;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribeAuthFailure = setApiAuthFailureHandler((context) => {
+      console.warn("[auth] Invalid bearer token detected. Auto sign-out started.", {
+        errorMessage: context.error.message,
+        method: context.method,
+        path: context.path,
+        status: context.error.status,
+      });
+
+      void signOut();
+    });
+
+    return unsubscribeAuthFailure;
+  }, [signOut]);
 
   const sendOtp = async (payload: SendOtpPayload) => {
     return authService.sendOtp(payload);

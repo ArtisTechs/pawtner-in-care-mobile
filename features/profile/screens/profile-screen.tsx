@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/services/api/api-error";
+import { cloudinaryService } from "@/services/media/cloudinary.service";
 import { userService } from "@/services/user/user.service";
 import { userStorage } from "@/services/user/user.storage";
 import type { UserProfile } from "@/types/user";
@@ -110,6 +111,7 @@ export default function ProfileScreen() {
     [colors, contentWidth],
   );
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isEditNameModalVisible, setIsEditNameModalVisible] = useState(false);
 
@@ -326,7 +328,10 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfileNames = () => {
-    if (isSavingProfile) {
+    if (isSavingProfile || isUploadingProfilePhoto) {
+      if (isUploadingProfilePhoto) {
+        showToast("Please wait for the photo upload to finish.");
+      }
       return;
     }
 
@@ -360,6 +365,42 @@ export default function ProfileScreen() {
       setDraftLastName("");
       setDraftProfilePictureUri(resolveNonEmptyText(result.profilePicture) ?? null);
     });
+  };
+
+  const handleDraftPhotoChange = async (selectedPhotoUri: string | null) => {
+    if (!selectedPhotoUri) {
+      setDraftProfilePictureUri(null);
+      showToast("Profile photo cleared.");
+      return;
+    }
+
+    if (/^https?:\/\//i.test(selectedPhotoUri)) {
+      setDraftProfilePictureUri(selectedPhotoUri);
+      showToast("Profile photo ready to save.");
+      return;
+    }
+
+    const previousPhotoUri = draftProfilePictureUri;
+    setDraftProfilePictureUri(selectedPhotoUri);
+    setIsUploadingProfilePhoto(true);
+    showToast("Uploading profile photo...");
+
+    try {
+      const uploadedPhotoUri = await cloudinaryService.uploadImage({
+        uri: selectedPhotoUri,
+      });
+
+      setDraftProfilePictureUri(uploadedPhotoUri);
+      showToast("Profile photo uploaded.");
+    } catch (error) {
+      setDraftProfilePictureUri(previousPhotoUri);
+      showToast(
+        getErrorMessage(error, "Unable to upload profile photo right now."),
+        "error",
+      );
+    } finally {
+      setIsUploadingProfilePhoto(false);
+    }
   };
 
   const handlePressSetting = (settingKey: ProfileSettingsKey) => {
@@ -477,16 +518,8 @@ export default function ProfileScreen() {
 
               <ProfilePhotoUploader
                 disabled={isSavingProfile}
-                onChangePhoto={(selectedPhotoUri) => {
-                  setDraftProfilePictureUri(selectedPhotoUri);
-
-                  if (selectedPhotoUri) {
-                    showToast("Profile photo ready to save.");
-                    return;
-                  }
-
-                  showToast("Profile photo cleared.");
-                }}
+                isUploading={isUploadingProfilePhoto}
+                onChangePhoto={handleDraftPhotoChange}
                 onError={(message) => showToast(message, "error")}
                 photoUri={draftProfilePictureUri}
               />
@@ -533,9 +566,12 @@ export default function ProfileScreen() {
               <View style={styles.modalButtonRow}>
                 <Pressable
                   accessibilityRole="button"
+                  disabled={isSavingProfile || isUploadingProfilePhoto}
                   onPress={handleCancelEditProfileNames}
                   style={({ pressed }) => [
                     styles.modalCancelButton,
+                    (isSavingProfile || isUploadingProfilePhoto) &&
+                      styles.modalCancelButtonDisabled,
                     pressed && styles.pressed,
                   ]}
                 >
@@ -544,16 +580,24 @@ export default function ProfileScreen() {
 
                 <Pressable
                   accessibilityRole="button"
-                  disabled={isSavingProfile}
+                  disabled={isSavingProfile || isUploadingProfilePhoto}
                   onPress={handleSaveProfileNames}
                   style={({ pressed }) => [
                     styles.modalSaveButton,
-                    isSavingProfile && styles.modalSaveButtonDisabled,
-                    pressed && !isSavingProfile && styles.pressed,
+                    (isSavingProfile || isUploadingProfilePhoto) &&
+                      styles.modalSaveButtonDisabled,
+                    pressed &&
+                      !isSavingProfile &&
+                      !isUploadingProfilePhoto &&
+                      styles.pressed,
                   ]}
                 >
                   <Text style={styles.modalSaveButtonText}>
-                    {isSavingProfile ? "Saving..." : "Save"}
+                    {isUploadingProfilePhoto
+                      ? "Uploading..."
+                      : isSavingProfile
+                        ? "Saving..."
+                        : "Save"}
                   </Text>
                 </Pressable>
               </View>
@@ -706,6 +750,9 @@ const createStyles = (colors: typeof Colors.light, contentWidth: number) =>
       backgroundColor: "rgba(255,255,255,0.9)",
       alignItems: "center",
       justifyContent: "center",
+    },
+    modalCancelButtonDisabled: {
+      opacity: 0.7,
     },
     modalSaveButton: {
       flex: 1,

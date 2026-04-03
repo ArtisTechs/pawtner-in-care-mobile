@@ -1,9 +1,8 @@
+import { CommunitySelectedMediaPreview } from "@/components/community/community-selected-media-preview";
 import { Colors, RoundedFontFamily } from "@/constants/theme";
-import {
-  resolveImageSource,
-  resolveOptionalImageSource,
-} from "@/features/community/community.data";
+import { resolveOptionalImageSource } from "@/features/community/community.data";
 import type {
+  CommunityComposerMediaAsset,
   CommunityImageSource,
   CommunityPostMediaType,
   SubmitCommunityPostInput,
@@ -18,7 +17,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -27,7 +25,8 @@ import {
 
 type CommunityComposerProps = {
   avatar: CommunityImageSource;
-  onSubmitPost: (input: SubmitCommunityPostInput) => void;
+  isSubmitting?: boolean;
+  onSubmitPost: (input: SubmitCommunityPostInput) => Promise<void> | void;
 };
 
 const MAX_PHOTOS = 5;
@@ -41,8 +40,25 @@ const MEDIA_ACTIONS: {
   { action: "video", iconName: "videocam" },
 ];
 
+const normalizeAsset = (
+  asset: ImagePicker.ImagePickerAsset,
+): CommunityComposerMediaAsset | null => {
+  const normalizedUri = asset.uri?.trim();
+
+  if (!normalizedUri) {
+    return null;
+  }
+
+  return {
+    fileName: asset.fileName ?? null,
+    mimeType: asset.mimeType ?? null,
+    uri: normalizedUri,
+  };
+};
+
 export function CommunityComposer({
   avatar,
+  isSubmitting = false,
   onSubmitPost,
 }: CommunityComposerProps) {
   const colorScheme = useColorScheme() ?? "light";
@@ -50,51 +66,90 @@ export function CommunityComposer({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [isComposeModalVisible, setIsComposeModalVisible] = useState(false);
   const [draftCaption, setDraftCaption] = useState("");
-  const [selectedPhotoUris, setSelectedPhotoUris] = useState<string[]>([]);
-  const [selectedVideoUri, setSelectedVideoUri] = useState<string | null>(null);
+  const [selectedPhotos, setSelectedPhotos] = useState<CommunityComposerMediaAsset[]>(
+    [],
+  );
+  const [selectedVideo, setSelectedVideo] = useState<CommunityComposerMediaAsset | null>(
+    null,
+  );
+  const [isDiscardConfirmVisible, setIsDiscardConfirmVisible] = useState(false);
 
   const canPost =
     draftCaption.trim().length > 0 ||
-    selectedPhotoUris.length > 0 ||
-    Boolean(selectedVideoUri);
+    selectedPhotos.length > 0 ||
+    Boolean(selectedVideo);
+  const hasDraftChanges =
+    draftCaption.length > 0 || selectedPhotos.length > 0 || Boolean(selectedVideo);
   const avatarSource = resolveOptionalImageSource(avatar);
-  const canAddMorePhotos =
-    selectedPhotoUris.length < MAX_PHOTOS && !selectedVideoUri;
-  const canAttachVideo = !selectedVideoUri && selectedPhotoUris.length === 0;
-  const mediaRuleMessage = selectedVideoUri
+  const canAddMorePhotos = selectedPhotos.length < MAX_PHOTOS && !selectedVideo;
+  const canAttachVideo = !selectedVideo && selectedPhotos.length === 0;
+  const mediaRuleMessage = selectedVideo
     ? "Clear video first to add photos."
-    : selectedPhotoUris.length > 0
+    : selectedPhotos.length > 0
       ? "Clear photos first to attach a video."
       : "";
 
   const resetDraft = () => {
     setDraftCaption("");
-    setSelectedPhotoUris([]);
-    setSelectedVideoUri(null);
+    setSelectedPhotos([]);
+    setSelectedVideo(null);
   };
 
   const closeComposerModal = () => {
     setIsComposeModalVisible(false);
   };
 
-  const handlePressCancel = () => {
+  const closeDiscardConfirm = () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsDiscardConfirmVisible(false);
+  };
+
+  const discardDraftAndClose = () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsDiscardConfirmVisible(false);
     resetDraft();
     closeComposerModal();
   };
 
-  const handlePressPost = () => {
-    if (!canPost) {
+  const handleRequestCloseComposer = () => {
+    if (isSubmitting) {
       return;
     }
 
-    onSubmitPost({
-      caption: draftCaption,
-      imageUris: selectedPhotoUris,
-      videoUri: selectedVideoUri,
-    });
+    if (!hasDraftChanges) {
+      closeComposerModal();
+      return;
+    }
 
-    resetDraft();
-    closeComposerModal();
+    setIsDiscardConfirmVisible(true);
+  };
+
+  const handlePressCancel = () => {
+    handleRequestCloseComposer();
+  };
+
+  const handlePressPost = async () => {
+    if (!canPost || isSubmitting) {
+      return;
+    }
+
+    try {
+      await onSubmitPost({
+        caption: draftCaption,
+        photos: selectedPhotos,
+        video: selectedVideo,
+      });
+      resetDraft();
+      closeComposerModal();
+    } catch {
+      // Keep current draft when submit fails.
+    }
   };
 
   const handlePickMedia = async (mediaType: CommunityPostMediaType) => {
@@ -115,13 +170,13 @@ export function CommunityComposer({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [mediaType === "image" ? "images" : "videos"],
         allowsMultipleSelection: mediaType === "image",
+        mediaTypes: [mediaType === "image" ? "images" : "videos"],
+        quality: 1,
         selectionLimit:
           mediaType === "image"
-            ? Math.max(1, MAX_PHOTOS - selectedPhotoUris.length)
+            ? Math.max(1, MAX_PHOTOS - selectedPhotos.length)
             : 1,
-        quality: 1,
       });
 
       if (result.canceled || !result.assets.length) {
@@ -129,28 +184,35 @@ export function CommunityComposer({
       }
 
       if (mediaType === "image") {
-        const incomingUris = result.assets
-          .map((asset) => asset.uri)
-          .filter((uri): uri is string => Boolean(uri));
+        const incomingPhotos = result.assets
+          .map(normalizeAsset)
+          .filter((asset): asset is CommunityComposerMediaAsset => Boolean(asset));
 
-        if (!incomingUris.length) {
+        if (!incomingPhotos.length) {
           return;
         }
 
-        setSelectedPhotoUris((currentUris) =>
-          Array.from(new Set([...currentUris, ...incomingUris])).slice(0, MAX_PHOTOS),
-        );
-        setSelectedVideoUri(null);
+        setSelectedPhotos((currentPhotos) => {
+          const existingByUri = new Map(currentPhotos.map((item) => [item.uri, item]));
+
+          for (const asset of incomingPhotos) {
+            existingByUri.set(asset.uri, asset);
+          }
+
+          return Array.from(existingByUri.values()).slice(0, MAX_PHOTOS);
+        });
+        setSelectedVideo(null);
         return;
       }
 
-      const pickedVideoUri = result.assets[0]?.uri;
-      if (!pickedVideoUri) {
+      const pickedVideo = normalizeAsset(result.assets[0]);
+
+      if (!pickedVideo) {
         return;
       }
 
-      setSelectedVideoUri(pickedVideoUri);
-      setSelectedPhotoUris([]);
+      setSelectedVideo(pickedVideo);
+      setSelectedPhotos([]);
     } catch {
       // Keep silent for now to match existing lightweight composer behavior.
     }
@@ -162,17 +224,17 @@ export function CommunityComposer({
   };
 
   const handleRemovePhoto = (uriToRemove: string) => {
-    setSelectedPhotoUris((currentUris) =>
-      currentUris.filter((uri) => uri !== uriToRemove),
+    setSelectedPhotos((currentPhotos) =>
+      currentPhotos.filter((asset) => asset.uri !== uriToRemove),
     );
   };
 
   const handleClearPhotos = () => {
-    setSelectedPhotoUris([]);
+    setSelectedPhotos([]);
   };
 
   const handleClearVideo = () => {
-    setSelectedVideoUri(null);
+    setSelectedVideo(null);
   };
 
   return (
@@ -199,14 +261,14 @@ export function CommunityComposer({
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.inputLauncherText}>What's happening?</Text>
+            <Text style={styles.inputLauncherText}>What&apos;s happening?</Text>
           </Pressable>
 
           <View style={styles.mediaActionGroup}>
             {MEDIA_ACTIONS.map((item) => {
               const isSelected =
-                (item.action === "image" && selectedPhotoUris.length > 0) ||
-                (item.action === "video" && Boolean(selectedVideoUri));
+                (item.action === "image" && selectedPhotos.length > 0) ||
+                (item.action === "video" && Boolean(selectedVideo));
 
               return (
                 <Pressable
@@ -239,12 +301,12 @@ export function CommunityComposer({
         animationType="slide"
         transparent
         visible={isComposeModalVisible}
-        onRequestClose={handlePressCancel}
+        onRequestClose={handleRequestCloseComposer}
       >
         <View style={styles.modalBackdrop}>
           <Pressable
             accessibilityRole="button"
-            onPress={handlePressCancel}
+            onPress={handleRequestCloseComposer}
             style={StyleSheet.absoluteFill}
           />
           <KeyboardAvoidingView
@@ -267,79 +329,32 @@ export function CommunityComposer({
 
               <View style={styles.mediaSummaryRow}>
                 <Text style={styles.mediaSummaryText}>
-                  Photos: {selectedPhotoUris.length}/{MAX_PHOTOS}
+                  Photos: {selectedPhotos.length}/{MAX_PHOTOS}
                 </Text>
                 <Text style={styles.mediaSummaryText}>
-                  Video: {selectedVideoUri ? MAX_VIDEO : 0}/{MAX_VIDEO}
+                  Video: {selectedVideo ? MAX_VIDEO : 0}/{MAX_VIDEO}
                 </Text>
               </View>
 
-              {selectedPhotoUris.length ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.photoPreviewScrollerContent}
-                >
-                  {selectedPhotoUris.map((photoUri, index) => (
-                    <View key={`${photoUri}-${index}`} style={styles.photoPreviewCard}>
-                      <Image
-                        source={resolveImageSource(photoUri)}
-                        style={styles.photoPreviewImage}
-                        resizeMode="cover"
-                      />
-
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() => handleRemovePhoto(photoUri)}
-                        style={({ pressed }) => [
-                          styles.removeMediaButton,
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <MaterialIcons color={colors.white} name="close" size={16} />
-                      </Pressable>
-                    </View>
-                  ))}
-                </ScrollView>
-              ) : null}
-
-              {selectedVideoUri ? (
-                <View style={styles.videoPreviewWrap}>
-                  <View style={styles.videoPreviewInfo}>
-                    <MaterialIcons
-                      color={colors.dashboardBottomIconActive}
-                      name="videocam"
-                      size={19}
-                    />
-                    <Text style={styles.videoPreviewText}>1 video selected</Text>
-                  </View>
-
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={handleClearVideo}
-                    style={({ pressed }) => [
-                      styles.videoRemoveButton,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <MaterialIcons
-                      color={colors.dashboardBottomIconActive}
-                      name="close"
-                      size={16}
-                    />
-                  </Pressable>
-                </View>
-              ) : null}
+              <CommunitySelectedMediaPreview
+                onClearPhotos={handleClearPhotos}
+                onClearVideo={handleClearVideo}
+                onRemovePhoto={handleRemovePhoto}
+                photoUris={selectedPhotos.map((item) => item.uri)}
+                videoMimeType={selectedVideo?.mimeType ?? null}
+                videoUri={selectedVideo?.uri ?? null}
+              />
 
               <View style={styles.modalMediaActionGroup}>
                 <Pressable
                   accessibilityRole="button"
-                  disabled={!canAddMorePhotos}
+                  disabled={!canAddMorePhotos || isSubmitting}
                   onPress={() => void handlePickMedia("image")}
                   style={({ pressed }) => [
                     styles.modalMediaActionButton,
-                    !canAddMorePhotos && styles.modalMediaActionButtonDisabled,
-                    pressed && canAddMorePhotos && styles.pressed,
+                    (!canAddMorePhotos || isSubmitting) &&
+                      styles.modalMediaActionButtonDisabled,
+                    pressed && canAddMorePhotos && !isSubmitting && styles.pressed,
                   ]}
                 >
                   <MaterialIcons
@@ -348,19 +363,22 @@ export function CommunityComposer({
                     size={18}
                   />
                   <Text style={styles.modalMediaActionText}>
-                    {selectedPhotoUris.length ? "Add more photos" : "Add photos"}
+                    {selectedPhotos.length ? "Add more photos" : "Add photos"}
                   </Text>
                 </Pressable>
 
                 <Pressable
                   accessibilityRole="button"
-                  disabled={selectedPhotoUris.length === 0}
+                  disabled={selectedPhotos.length === 0 || isSubmitting}
                   onPress={handleClearPhotos}
                   style={({ pressed }) => [
                     styles.modalMediaActionButton,
-                    selectedPhotoUris.length === 0 &&
+                    (selectedPhotos.length === 0 || isSubmitting) &&
                       styles.modalMediaActionButtonDisabled,
-                    pressed && selectedPhotoUris.length > 0 && styles.pressed,
+                    pressed &&
+                      selectedPhotos.length > 0 &&
+                      !isSubmitting &&
+                      styles.pressed,
                   ]}
                 >
                   <MaterialIcons
@@ -373,12 +391,13 @@ export function CommunityComposer({
 
                 <Pressable
                   accessibilityRole="button"
-                  disabled={!canAttachVideo}
+                  disabled={!canAttachVideo || isSubmitting}
                   onPress={() => void handlePickMedia("video")}
                   style={({ pressed }) => [
                     styles.modalMediaActionButton,
-                    !canAttachVideo && styles.modalMediaActionButtonDisabled,
-                    pressed && canAttachVideo && styles.pressed,
+                    (!canAttachVideo || isSubmitting) &&
+                      styles.modalMediaActionButtonDisabled,
+                    pressed && canAttachVideo && !isSubmitting && styles.pressed,
                   ]}
                 >
                   <MaterialIcons
@@ -400,7 +419,7 @@ export function CommunityComposer({
                   onPress={handlePressCancel}
                   style={({ pressed }) => [
                     styles.cancelButton,
-                    pressed && styles.pressed,
+                    (pressed || isSubmitting) && styles.pressed,
                   ]}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -408,18 +427,77 @@ export function CommunityComposer({
 
                 <Pressable
                   accessibilityRole="button"
-                  onPress={handlePressPost}
+                  onPress={() => void handlePressPost()}
                   style={({ pressed }) => [
                     styles.postButton,
-                    !canPost && styles.postButtonDisabled,
-                    pressed && canPost && styles.pressed,
+                    (!canPost || isSubmitting) && styles.postButtonDisabled,
+                    pressed && canPost && !isSubmitting && styles.pressed,
                   ]}
                 >
-                  <Text style={styles.postButtonText}>Post</Text>
+                  <Text style={styles.postButtonText}>
+                    {isSubmitting ? "Posting..." : "Post"}
+                  </Text>
                 </Pressable>
               </View>
             </View>
           </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isDiscardConfirmVisible}
+        onRequestClose={closeDiscardConfirm}
+      >
+        <View style={styles.promptOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSubmitting}
+            onPress={closeDiscardConfirm}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <View style={styles.promptCard}>
+            <View style={styles.cancelPromptIconOuterCircle}>
+              <View style={styles.cancelPromptIconInnerCircle}>
+                <MaterialIcons color="#FFFFFF" name="close" size={42} />
+              </View>
+            </View>
+
+            <Text style={styles.promptTitle}>Discard this post?</Text>
+            <Text style={styles.promptBodyText}>
+              You have unsaved changes. Discard your draft and close the composer?
+            </Text>
+
+            <View style={styles.promptButtonRow}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isSubmitting}
+                onPress={closeDiscardConfirm}
+                style={({ pressed }) => [
+                  styles.promptButton,
+                  styles.promptCancelButton,
+                  pressed && styles.promptButtonPressed,
+                ]}
+              >
+                <Text style={styles.promptCancelText}>Keep editing</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={isSubmitting}
+                onPress={discardDraftAndClose}
+                style={({ pressed }) => [
+                  styles.promptButton,
+                  styles.promptDangerButton,
+                  pressed && styles.promptButtonPressed,
+                ]}
+              >
+                <Text style={styles.promptConfirmText}>Discard</Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
       </Modal>
     </>
@@ -428,23 +506,6 @@ export function CommunityComposer({
 
 const createStyles = (colors: typeof Colors.light) =>
   StyleSheet.create({
-    card: {
-      width: "100%",
-      borderRadius: 16,
-      backgroundColor: "#C7DAEE",
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      shadowColor: colors.dashboardShadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.16,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    inputRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-    },
     avatar: {
       width: 40,
       height: 40,
@@ -460,190 +521,6 @@ const createStyles = (colors: typeof Colors.light) =>
       marginTop: 1,
       alignItems: "center",
       justifyContent: "center",
-    },
-    inputLauncher: {
-      flex: 1,
-      minHeight: 42,
-      borderRadius: 21,
-      backgroundColor: "#EDEDEF",
-      paddingHorizontal: 14,
-      alignItems: "flex-start",
-      justifyContent: "center",
-    },
-    inputLauncherText: {
-      fontFamily: RoundedFontFamily,
-      color: "rgba(42, 102, 171, 0.8)",
-      fontSize: 14,
-      lineHeight: 18,
-      fontWeight: "700",
-    },
-    mediaActionGroup: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    mediaActionButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    mediaActionButtonSelected: {
-      backgroundColor: "rgba(29, 78, 136, 0.14)",
-    },
-    modalBackdrop: {
-      flex: 1,
-      backgroundColor: "rgba(11, 28, 51, 0.35)",
-      justifyContent: "flex-end",
-    },
-    modalKeyboardAvoidingView: {
-      width: "100%",
-    },
-    modalCard: {
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      backgroundColor: "#E7EFF8",
-      paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 20,
-      gap: 10,
-    },
-    modalTitle: {
-      fontFamily: RoundedFontFamily,
-      color: colors.dashboardBottomIconActive,
-      fontSize: 20,
-      lineHeight: 24,
-      fontWeight: "900",
-    },
-    captionInput: {
-      minHeight: 95,
-      borderRadius: 14,
-      backgroundColor: colors.white,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontFamily: RoundedFontFamily,
-      color: colors.dashboardBottomIcon,
-      fontSize: 14,
-      lineHeight: 18,
-      fontWeight: "600",
-      borderWidth: 1,
-      borderColor: "rgba(29, 78, 136, 0.14)",
-    },
-    mediaSummaryRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 10,
-    },
-    mediaSummaryText: {
-      fontFamily: RoundedFontFamily,
-      color: colors.dashboardBottomIcon,
-      fontSize: 12,
-      lineHeight: 16,
-      fontWeight: "700",
-      opacity: 0.84,
-    },
-    photoPreviewScrollerContent: {
-      gap: 8,
-      paddingVertical: 2,
-    },
-    photoPreviewCard: {
-      width: 90,
-      height: 90,
-      borderRadius: 10,
-      overflow: "hidden",
-      backgroundColor: "rgba(44, 110, 184, 0.12)",
-      position: "relative",
-    },
-    photoPreviewImage: {
-      width: "100%",
-      height: "100%",
-    },
-    removeMediaButton: {
-      position: "absolute",
-      top: 6,
-      right: 6,
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "rgba(29, 78, 136, 0.92)",
-    },
-    videoPreviewWrap: {
-      minHeight: 52,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: "rgba(29, 78, 136, 0.2)",
-      backgroundColor: "rgba(255, 255, 255, 0.55)",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-    },
-    videoPreviewInfo: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    videoPreviewText: {
-      fontFamily: RoundedFontFamily,
-      color: colors.dashboardBottomIcon,
-      fontSize: 14,
-      lineHeight: 16,
-      fontWeight: "700",
-    },
-    videoRemoveButton: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    modalMediaActionGroup: {
-      flexDirection: "row",
-      alignItems: "center",
-      flexWrap: "wrap",
-      gap: 8,
-    },
-    modalMediaActionButton: {
-      minHeight: 34,
-      borderRadius: 17,
-      borderWidth: 1,
-      borderColor: "rgba(29, 78, 136, 0.22)",
-      backgroundColor: colors.white,
-      paddingHorizontal: 12,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-    },
-    modalMediaActionButtonDisabled: {
-      opacity: 0.4,
-    },
-    modalMediaActionText: {
-      fontFamily: RoundedFontFamily,
-      color: colors.dashboardBottomIcon,
-      fontSize: 13,
-      lineHeight: 16,
-      fontWeight: "700",
-    },
-    mediaRuleText: {
-      fontFamily: RoundedFontFamily,
-      color: colors.dashboardBottomIcon,
-      fontSize: 12,
-      lineHeight: 16,
-      fontWeight: "600",
-      opacity: 0.78,
-    },
-    modalButtonRow: {
-      marginTop: 2,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      gap: 10,
     },
     cancelButton: {
       height: 36,
@@ -663,6 +540,149 @@ const createStyles = (colors: typeof Colors.light) =>
       lineHeight: 18,
       fontWeight: "800",
     },
+    captionInput: {
+      minHeight: 95,
+      borderRadius: 14,
+      backgroundColor: colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: "600",
+      borderWidth: 1,
+      borderColor: "rgba(29, 78, 136, 0.14)",
+    },
+    card: {
+      width: "100%",
+      borderRadius: 16,
+      backgroundColor: "#C7DAEE",
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      shadowColor: colors.dashboardShadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.16,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    inputLauncher: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: 21,
+      backgroundColor: "#EDEDEF",
+      paddingHorizontal: 14,
+      alignItems: "flex-start",
+      justifyContent: "center",
+    },
+    inputLauncherText: {
+      fontFamily: RoundedFontFamily,
+      color: "rgba(42, 102, 171, 0.8)",
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: "700",
+    },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    mediaActionButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    mediaActionButtonSelected: {
+      backgroundColor: "rgba(29, 78, 136, 0.14)",
+    },
+    mediaActionGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    mediaRuleText: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: "600",
+      opacity: 0.78,
+    },
+    mediaSummaryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    mediaSummaryText: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: "700",
+      opacity: 0.84,
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(11, 28, 51, 0.35)",
+      justifyContent: "flex-end",
+    },
+    modalButtonRow: {
+      marginTop: 2,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 10,
+    },
+    modalCard: {
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      backgroundColor: "#E7EFF8",
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 20,
+      gap: 10,
+    },
+    modalKeyboardAvoidingView: {
+      width: "100%",
+    },
+    modalMediaActionButton: {
+      minHeight: 34,
+      borderRadius: 17,
+      borderWidth: 1,
+      borderColor: "rgba(29, 78, 136, 0.22)",
+      backgroundColor: colors.white,
+      paddingHorizontal: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    modalMediaActionButtonDisabled: {
+      opacity: 0.4,
+    },
+    modalMediaActionGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    modalMediaActionText: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIcon,
+      fontSize: 13,
+      lineHeight: 16,
+      fontWeight: "700",
+    },
+    modalTitle: {
+      fontFamily: RoundedFontFamily,
+      color: colors.dashboardBottomIconActive,
+      fontSize: 20,
+      lineHeight: 24,
+      fontWeight: "900",
+    },
     postButton: {
       height: 36,
       minWidth: 90,
@@ -681,6 +701,102 @@ const createStyles = (colors: typeof Colors.light) =>
       fontSize: 16,
       lineHeight: 18,
       fontWeight: "900",
+    },
+    promptOverlay: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 26,
+      backgroundColor: "rgba(10, 19, 35, 0.45)",
+    },
+    promptCard: {
+      width: "100%",
+      maxWidth: 320,
+      borderRadius: 14,
+      paddingHorizontal: 18,
+      paddingTop: 16,
+      paddingBottom: 18,
+      backgroundColor: colors.dashboardSectionCardBackground,
+      borderWidth: 2,
+      borderColor: colors.petDetailsOutline,
+      alignItems: "center",
+      shadowColor: colors.dashboardShadow,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.28,
+      shadowRadius: 10,
+      elevation: 10,
+    },
+    cancelPromptIconOuterCircle: {
+      width: 92,
+      height: 92,
+      borderRadius: 46,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#F6A9A9",
+      marginBottom: 12,
+    },
+    cancelPromptIconInnerCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#E24D4D",
+    },
+    promptTitle: {
+      textAlign: "center",
+      fontFamily: RoundedFontFamily,
+      color: colors.text,
+      fontSize: 18,
+      lineHeight: 24,
+      fontWeight: "800",
+      marginBottom: 8,
+    },
+    promptBodyText: {
+      textAlign: "center",
+      fontFamily: RoundedFontFamily,
+      color: colors.petDetailsTextSecondary,
+      fontSize: 15,
+      lineHeight: 21,
+      fontWeight: "600",
+      marginBottom: 18,
+    },
+    promptButtonRow: {
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    promptButton: {
+      flex: 1,
+      height: 50,
+      borderRadius: 25,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    promptCancelButton: {
+      backgroundColor: "#E5E5E5",
+    },
+    promptDangerButton: {
+      backgroundColor: "#E24D4D",
+    },
+    promptCancelText: {
+      color: "#4B9AF0",
+      fontFamily: RoundedFontFamily,
+      fontSize: 17,
+      lineHeight: 22,
+      fontWeight: "600",
+    },
+    promptConfirmText: {
+      color: colors.white,
+      fontFamily: RoundedFontFamily,
+      fontSize: 17,
+      lineHeight: 22,
+      fontWeight: "600",
+    },
+    promptButtonPressed: {
+      opacity: 0.88,
     },
     pressed: {
       opacity: 0.82,
